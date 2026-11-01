@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auctions — GlobalPass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="auctions.html" class="active">Auctions</a>
+        <a href="login.html">Log in</a>
+        <a href="register.html" class="btn btn-primary">Sign up</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container section">
+    <div class="section-head"><h2>Auction catalog</h2></div>
+
+    <form class="toolbar" id="filters" role="search">
+      <input type="search" id="search" placeholder="Search by country…" aria-label="Search by country">
+      <select id="status" aria-label="Filter by status">
+        <option value="active">Active</option>
+        <option value="ended">Ended</option>
+        <option value="all">All</option>
+      </select>
+      <select id="sort" aria-label="Sort auctions">
+        <option value="ending">Ending soonest</option>
+        <option value="newest">Newest</option>
+        <option value="price_high">Highest bid</option>
+        <option value="price_low">Lowest bid</option>
+      </select>
+    </form>
+
+    <div class="grid" id="catalog">
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module">
+    import { getAuctions } from './js/api.js';
+    import { auctionCard, startCountdowns } from './js/ui.js';
+
+    const box = document.getElementById('catalog');
+    const search = document.getElementById('search');
+    const status = document.getElementById('status');
+    const sort = document.getElementById('sort');
+
+    async function load() {
+      try {
+        const auctions = await getAuctions({
+          search: search.value.trim(),
+          status: status.value,
+          sort: sort.value,
+        });
+        box.innerHTML = auctions.length
+          ? auctions.map(auctionCard).join('')
+          : '<p class="state">No auctions match your filters.</p>';
+      } catch (err) {
+        console.error(err);
+        box.innerHTML = '<p class="state error">Could not load auctions. Try refreshing.</p>';
+      }
+    }
+
+    let timer;
+    search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 300); });
+    status.addEventListener('change', load);
+    sort.addEventListener('change', load);
+    document.getElementById('filters').addEventListener('submit', (e) => e.preventDefault());
+
+    load();
+    startCountdowns();
+  </script>
+</body>
+</html>

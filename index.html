@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobalPass — Citizenship Auctions</title>
+  <meta name="description" content="Bid live on citizenship listings from countries around the world.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links">
+        <a href="index.html" class="active">Home</a>
+        <a href="auctions.html">Auctions</a>
+        <a href="login.html">Log in</a>
+        <a href="register.html" class="btn btn-primary">Sign up</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <h1>Bid on citizenship from<br><span>around the world</span></h1>
+      <p>Governments list citizenship opportunities. You place live bids. The highest bid wins when the clock hits zero.</p>
+      <div class="hero-actions">
+        <a href="auctions.html" class="btn btn-primary">Browse auctions</a>
+        <a href="register.html" class="btn btn-ghost">Create an account</a>
+      </div>
+    </section>
+
+    <section class="section container" aria-labelledby="live-heading">
+      <div class="section-head">
+        <h2 id="live-heading">Ending soon</h2>
+        <a href="auctions.html">View all →</a>
+      </div>
+      <div class="grid" id="featured">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+    </section>
+
+    <section class="section container" aria-labelledby="how-heading">
+      <div class="section-head"><h2 id="how-heading">How it works</h2></div>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><h3>Create an account</h3><p>Sign up as a bidder in under a minute.</p></div>
+        <div class="step"><div class="num">2</div><h3>Place your bid</h3><p>Each bid must beat the current highest. Prices update live.</p></div>
+        <div class="step"><div class="num">3</div><h3>Win the auction</h3><p>Highest bid when the timer ends wins the citizenship spot.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module">
+    import { getActiveAuctions } from './js/api.js';
+    import { auctionCard, startCountdowns } from './js/ui.js';
+
+    const box = document.getElementById('featured');
+    try {
+      const auctions = await getActiveAuctions(3);
+      box.innerHTML = auctions.length
+        ? auctions.map(auctionCard).join('')
+        : '<p class="state">No live auctions right now. Check back soon.</p>';
+      startCountdowns();
+    } catch (err) {
+      console.error(err);
+      box.innerHTML = '<p class="state error">Could not load auctions. Try refreshing.</p>';
+    }
+  </script>
+</body>
+</html>
