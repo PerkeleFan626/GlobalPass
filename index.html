@@ -29,7 +29,7 @@
     <section class="section container" aria-labelledby="live-heading">
       <div class="section-head">
         <h2 id="live-heading">Ending soon</h2>
-        <a href="auctions.html">View all →</a>
+        <span class="head-right"><span class="live-badge" id="live-badge">○ Connecting…</span><a href="auctions.html">View all →</a></span>
       </div>
       <div class="grid" id="featured">
         <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
@@ -54,18 +54,25 @@
     import { getActiveAuctions } from './js/api.js';
     import { auctionCard, startCountdowns } from './js/ui.js';
     import './js/auth.js';
+    import { subscribeAuctions } from './js/realtime.js';
 
     const box = document.getElementById('featured');
-    try {
-      const auctions = await getActiveAuctions(3);
-      box.innerHTML = auctions.length
-        ? auctions.map(auctionCard).join('')
-        : '<p class="state">No live auctions right now. Check back soon.</p>';
-      startCountdowns();
-    } catch (err) {
-      console.error(err);
-      box.innerHTML = '<p class="state error">Could not load auctions. Try refreshing.</p>';
+
+    async function load() {
+      try {
+        const auctions = await getActiveAuctions(3);
+        box.innerHTML = auctions.length
+          ? auctions.map(auctionCard).join('')
+          : '<p class="state">No live auctions right now. Check back soon.</p>';
+      } catch (err) {
+        console.error(err);
+        box.innerHTML = '<p class="state error">Could not load auctions. Try refreshing.</p>';
+      }
     }
+
+    await load();
+    startCountdowns();
+    subscribeAuctions(load);   // live: prices and new listings update instantly
   </script>
 </body>
 </html>

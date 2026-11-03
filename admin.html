@@ -18,25 +18,49 @@
   <main class="container section" id="page" hidden>
     <div class="section-head">
       <h2>Admin dashboard</h2>
-      <select id="filter" aria-label="Filter by status" class="select-sm">
-        <option value="all">All auctions</option>
-        <option value="active">Active</option>
-        <option value="ended">Ended</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+      <span class="live-badge" id="live-badge">○ Connecting…</span>
     </div>
 
-    <div class="stats" id="stats"></div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" data-tab="auctions" aria-selected="true">Auctions</button>
+      <button class="tab" role="tab" data-tab="users" aria-selected="false">Users</button>
+    </div>
+
     <p class="form-msg" id="msg" role="alert"></p>
 
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr><th>Country</th><th>Status</th><th>Starting</th><th>Current bid</th><th>Ends</th><th></th></tr>
-        </thead>
-        <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
-      </table>
-    </div>
+    <!-- Auctions tab -->
+    <section id="tab-auctions">
+      <div class="section-head">
+        <div class="stats" id="stats" style="flex:1;margin:0"></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <select id="filter" aria-label="Filter by status" class="select-sm">
+          <option value="all">All auctions</option>
+          <option value="active">Active</option>
+          <option value="ended">Ended</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Country</th><th>Status</th><th>Starting</th><th>Current bid</th><th>Ends</th><th></th></tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Users tab -->
+    <section id="tab-users" hidden>
+      <input type="search" id="user-search" class="select-sm" style="width:100%;margin-bottom:12px" placeholder="Search by name or email…" aria-label="Search users">
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Role</th></tr></thead>
+          <tbody id="user-rows"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -47,22 +71,38 @@
     import { supabase } from './js/supabase.js';
     import { requireRole } from './js/auth.js';
     import { formatNZD, esc } from './js/ui.js';
+    import { subscribeAuctions } from './js/realtime.js';
 
-    const profile = await requireRole(['admin']);
-    if (profile) init();
+    const me = await requireRole(['admin']);
+    if (me) init();
 
     function init() {
       document.getElementById('page').hidden = false;
+      const msg = document.getElementById('msg');
+      const show = (text, ok = false) => { msg.textContent = text; msg.className = 'form-msg ' + (ok ? 'ok' : 'error'); };
+
+      // ---------- Tabs ----------
+      document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach((t) => {
+          const on = t === tab;
+          t.classList.toggle('active', on);
+          t.setAttribute('aria-selected', on);
+          document.getElementById('tab-' + t.dataset.tab).hidden = !on;
+        });
+        msg.textContent = '';
+        if (tab.dataset.tab === 'users') loadUsers();
+      }));
+
+      // ---------- Auctions ----------
       const rows = document.getElementById('rows');
       const filter = document.getElementById('filter');
-      const msg = document.getElementById('msg');
-      let all = [];
+      let auctions = [];
 
-      function render() {
-        const list = filter.value === 'all' ? all : all.filter((a) => a.status === filter.value);
-        const count = (s) => all.filter((a) => a.status === s).length;
+      function renderAuctions() {
+        const list = filter.value === 'all' ? auctions : auctions.filter((a) => a.status === filter.value);
+        const count = (s) => auctions.filter((a) => a.status === s).length;
         document.getElementById('stats').innerHTML = `
-          <div class="stat"><small>Total</small><strong>${all.length}</strong></div>
+          <div class="stat"><small>Total</small><strong>${auctions.length}</strong></div>
           <div class="stat"><small>Active</small><strong>${count('active')}</strong></div>
           <div class="stat"><small>Ended</small><strong>${count('ended')}</strong></div>
           <div class="stat"><small>Cancelled</small><strong>${count('cancelled')}</strong></div>`;
@@ -70,7 +110,7 @@
         rows.innerHTML = list.length
           ? list.map((a) => `
             <tr>
-              <td data-label="Country">${esc(a.country_name)}</td>
+              <td data-label="Country"><a href="auction.html?id=${encodeURIComponent(a.id)}">${esc(a.country_name)}</a></td>
               <td data-label="Status"><span class="badge badge-${esc(a.status)}">${esc(a.status)}</span></td>
               <td data-label="Starting">${formatNZD(a.starting_price)}</td>
               <td data-label="Current bid">${formatNZD(a.current_highest_bid)}</td>
@@ -82,20 +122,17 @@
           : '<tr><td colspan="6">No auctions.</td></tr>';
       }
 
-      async function load() {
+      async function loadAuctions() {
         const { data, error } = await supabase
           .from('auctions')
           .select('id, country_name, starting_price, current_highest_bid, end_time, status')
           .order('created_at', { ascending: false });
-        if (error) {
-          rows.innerHTML = '<tr><td colspan="6">Could not load auctions.</td></tr>';
-          return;
-        }
-        all = data;
-        render();
+        if (error) { rows.innerHTML = '<tr><td colspan="6">Could not load auctions.</td></tr>'; return; }
+        auctions = data;
+        renderAuctions();
       }
 
-      // Two-click confirm instead of a browser confirm() popup
+      // Two-click confirm instead of a browser popup
       rows.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-cancel]');
         if (!btn) return;
@@ -107,19 +144,74 @@
         }
         btn.disabled = true;
         const { error } = await supabase.from('auctions').update({ status: 'cancelled' }).eq('id', btn.dataset.cancel);
-        if (error) {
-          msg.textContent = 'Could not cancel: ' + error.message;
-          msg.className = 'form-msg error';
-          btn.disabled = false;
-          return;
-        }
-        msg.textContent = `${btn.dataset.name} auction cancelled.`;
-        msg.className = 'form-msg ok';
-        load();
+        if (error) { show('Could not cancel: ' + error.message); btn.disabled = false; return; }
+        show(`${btn.dataset.name} auction cancelled.`, true);
+        loadAuctions();
       });
 
-      filter.addEventListener('change', render);
-      load();
+      filter.addEventListener('change', renderAuctions);
+
+      // ---------- Users ----------
+      const userRows = document.getElementById('user-rows');
+      const userSearch = document.getElementById('user-search');
+      let users = [];
+
+      function renderUsers() {
+        const q = userSearch.value.trim().toLowerCase();
+        const list = q ? users.filter((u) => (u.name + ' ' + u.email).toLowerCase().includes(q)) : users;
+        userRows.innerHTML = list.length
+          ? list.map((u) => {
+              const self = u.profileid === me.profileid;
+              return `
+              <tr>
+                <td data-label="Name">${esc(u.name)}${self ? ' <span class="muted">(you)</span>' : ''}</td>
+                <td data-label="Email">${esc(u.email)}</td>
+                <td data-label="Joined">${new Date(u.created_at).toLocaleDateString('en-NZ')}</td>
+                <td data-label="Role">
+                  <select class="role-select" data-user="${esc(u.profileid)}" data-name="${esc(u.name)}"
+                          aria-label="Role for ${esc(u.name)}" ${self ? 'disabled title="You cannot change your own role"' : ''}>
+                    ${['bidder', 'government', 'admin'].map((r) =>
+                      `<option value="${r}"${r === u.role ? ' selected' : ''}>${r}</option>`).join('')}
+                  </select>
+                </td>
+              </tr>`;
+            }).join('')
+          : '<tr><td colspan="4">No users found.</td></tr>';
+      }
+
+      async function loadUsers() {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('profileid, name, email, role, created_at')
+          .order('created_at', { ascending: false });
+        if (error) { userRows.innerHTML = '<tr><td colspan="4">Could not load users.</td></tr>'; return; }
+        users = data;
+        renderUsers();
+      }
+
+      userRows.addEventListener('change', async (e) => {
+        const sel = e.target.closest('.role-select');
+        if (!sel) return;
+        const user = users.find((u) => u.profileid === sel.dataset.user);
+        const oldRole = user.role;
+        sel.disabled = true;
+        // .select() returns the updated row — empty means the database blocked it (RLS)
+        const { data, error } = await supabase
+          .from('profiles').update({ role: sel.value }).eq('profileid', sel.dataset.user).select();
+        sel.disabled = false;
+        if (error || !data?.length) {
+          sel.value = oldRole;
+          show(`Could not change ${sel.dataset.name}'s role${error ? ': ' + error.message : ' (permission denied).'}`);
+          return;
+        }
+        user.role = sel.value;
+        show(`${sel.dataset.name} is now ${sel.value}.`, true);
+      });
+
+      userSearch.addEventListener('input', renderUsers);
+
+      loadAuctions();
+      subscribeAuctions(loadAuctions);   // live: new listings, bids and cancellations
     }
   </script>
 </body>
