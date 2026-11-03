@@ -34,3 +34,47 @@ export async function getAuctions({ search = '', status = 'all', sort = 'ending'
   if (error) throw error;
   return data;
 }
+
+// ---------- Sprint 3: auction detail + bidding ----------
+
+// One auction by id
+export async function getAuction(id) {
+  const { data, error } = await supabase
+    .from('auctions')
+    .select('id, country_name, starting_price, current_highest_bid, highest_bidder_id, end_time, status, created_by')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Bid history for an auction, highest first.
+// NOTE: the column is spelt "acution_id" in the database — keep it until Sebastian renames it.
+export async function getBids(auctionId) {
+  const { data, error } = await supabase
+    .from('bids')
+    .select('id, bidder_id, amount, created_at')
+    .eq('acution_id', auctionId)
+    .order('amount', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+// Lowest bid the user is allowed to place
+export function minNextBid(auction) {
+  const current = Number(auction.current_highest_bid) || 0;
+  return current > 0 ? current + 1 : Number(auction.starting_price);
+}
+
+// ---- BID CONTRACT — confirm the parameter names with Sebastian ----
+// Calls the database function process_bid, which validates and saves the bid
+// (auction still open, amount higher than current bid) in one safe step.
+// If Sebastian's parameter names differ, change ONLY the object below.
+export async function placeBid(auctionId, amount) {
+  const { data, error } = await supabase.rpc('process_bid', {
+    p_auction_id: auctionId,
+    p_amount: amount,
+  });
+  if (error) throw error;
+  return data;
+}
