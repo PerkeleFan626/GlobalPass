@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My listings — GlobalPass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main class="container section" id="page" hidden>
+    <form class="form-card" id="auction-form" novalidate>
+      <h1>List a citizenship auction</h1>
+      <p class="form-sub">Bidding opens immediately and closes at the end time.</p>
+
+      <label for="country">Country</label>
+      <input id="country" name="country" type="text" maxlength="80" required>
+
+      <label for="price">Starting price (NZD)</label>
+      <input id="price" name="price" type="number" min="1" step="1" inputmode="numeric" required>
+
+      <label for="end">Auction ends</label>
+      <input id="end" name="end" type="datetime-local" required>
+
+      <p class="form-msg" id="msg" role="alert"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="submit">Create auction</button>
+    </form>
+
+    <div class="section-head" style="margin-top:48px"><h2>My listings</h2></div>
+    <div class="grid" id="mine"><div class="skeleton"></div></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { requireRole } from './js/auth.js';
+    import { auctionCard, startCountdowns } from './js/ui.js';
+
+    const profile = await requireRole(['government']);
+    if (profile) init(profile);
+
+    function init(profile) {
+      document.getElementById('page').hidden = false;
+      const form = document.getElementById('auction-form');
+      const msg = document.getElementById('msg');
+      const btn = document.getElementById('submit');
+      const end = document.getElementById('end');
+
+      // End time must be in the future
+      const pad = (n) => String(n).padStart(2, '0');
+      const now = new Date(Date.now() + 60 * 60 * 1000);
+      end.min = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+      function show(text, ok = false) {
+        msg.textContent = text;
+        msg.className = 'form-msg ' + (ok ? 'ok' : 'error');
+      }
+
+      async function loadMine() {
+        const box = document.getElementById('mine');
+        const { data, error } = await supabase
+          .from('auctions')
+          .select('id, country_name, starting_price, current_highest_bid, end_time, status')
+          .eq('created_by', profile.profileid)
+          .order('created_at', { ascending: false });
+        if (error) {
+          box.innerHTML = '<p class="state error">Could not load your listings.</p>';
+          return;
+        }
+        box.innerHTML = data.length
+          ? data.map(auctionCard).join('')
+          : '<p class="state">You have no listings yet.</p>';
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const country = form.country.value.trim();
+        const price = Number(form.price.value);
+        const endTime = new Date(form.end.value);
+
+        if (!country) return show('Enter a country.');
+        if (!price || price < 1) return show('Starting price must be at least $1.');
+        if (isNaN(endTime) || endTime <= new Date()) return show('End time must be in the future.');
+
+        btn.disabled = true;
+        btn.textContent = 'Creating…';
+
+        const { error } = await supabase.from('auctions').insert({
+          country_name: country,
+          starting_price: price,
+          end_time: endTime.toISOString(),
+          created_by: profile.profileid,
+        });
+
+        btn.disabled = false;
+        btn.textContent = 'Create auction';
+
+        if (error) return show('Could not create auction: ' + error.message);
+        show('Auction created!', true);
+        form.reset();
+        loadMine();
+      });
+
+      loadMine();
+      startCountdowns();
+    }
+  </script>
+</body>
+</html>

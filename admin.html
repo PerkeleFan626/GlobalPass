@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — GlobalPass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main class="container section" id="page" hidden>
+    <div class="section-head">
+      <h2>Admin dashboard</h2>
+      <select id="filter" aria-label="Filter by status" class="select-sm">
+        <option value="all">All auctions</option>
+        <option value="active">Active</option>
+        <option value="ended">Ended</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <p class="form-msg" id="msg" role="alert"></p>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Country</th><th>Status</th><th>Starting</th><th>Current bid</th><th>Ends</th><th></th></tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { requireRole } from './js/auth.js';
+    import { formatNZD, esc } from './js/ui.js';
+
+    const profile = await requireRole(['admin']);
+    if (profile) init();
+
+    function init() {
+      document.getElementById('page').hidden = false;
+      const rows = document.getElementById('rows');
+      const filter = document.getElementById('filter');
+      const msg = document.getElementById('msg');
+      let all = [];
+
+      function render() {
+        const list = filter.value === 'all' ? all : all.filter((a) => a.status === filter.value);
+        const count = (s) => all.filter((a) => a.status === s).length;
+        document.getElementById('stats').innerHTML = `
+          <div class="stat"><small>Total</small><strong>${all.length}</strong></div>
+          <div class="stat"><small>Active</small><strong>${count('active')}</strong></div>
+          <div class="stat"><small>Ended</small><strong>${count('ended')}</strong></div>
+          <div class="stat"><small>Cancelled</small><strong>${count('cancelled')}</strong></div>`;
+
+        rows.innerHTML = list.length
+          ? list.map((a) => `
+            <tr>
+              <td data-label="Country">${esc(a.country_name)}</td>
+              <td data-label="Status"><span class="badge badge-${esc(a.status)}">${esc(a.status)}</span></td>
+              <td data-label="Starting">${formatNZD(a.starting_price)}</td>
+              <td data-label="Current bid">${formatNZD(a.current_highest_bid)}</td>
+              <td data-label="Ends">${new Date(a.end_time).toLocaleString('en-NZ')}</td>
+              <td>${a.status === 'active'
+                ? `<button class="btn btn-danger btn-sm" data-cancel="${esc(a.id)}" data-name="${esc(a.country_name)}">Cancel</button>`
+                : ''}</td>
+            </tr>`).join('')
+          : '<tr><td colspan="6">No auctions.</td></tr>';
+      }
+
+      async function load() {
+        const { data, error } = await supabase
+          .from('auctions')
+          .select('id, country_name, starting_price, current_highest_bid, end_time, status')
+          .order('created_at', { ascending: false });
+        if (error) {
+          rows.innerHTML = '<tr><td colspan="6">Could not load auctions.</td></tr>';
+          return;
+        }
+        all = data;
+        render();
+      }
+
+      // Two-click confirm instead of a browser confirm() popup
+      rows.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-cancel]');
+        if (!btn) return;
+        if (btn.dataset.armed !== 'true') {
+          btn.dataset.armed = 'true';
+          btn.textContent = 'Confirm?';
+          setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Cancel'; }, 3000);
+          return;
+        }
+        btn.disabled = true;
+        const { error } = await supabase.from('auctions').update({ status: 'cancelled' }).eq('id', btn.dataset.cancel);
+        if (error) {
+          msg.textContent = 'Could not cancel: ' + error.message;
+          msg.className = 'form-msg error';
+          btn.disabled = false;
+          return;
+        }
+        msg.textContent = `${btn.dataset.name} auction cancelled.`;
+        msg.className = 'form-msg ok';
+        load();
+      });
+
+      filter.addEventListener('change', render);
+      load();
+    }
+  </script>
+</body>
+</html>
