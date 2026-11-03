@@ -71,7 +71,7 @@
 
       const profile = await getProfile();
       // Only follow ?next= to a local page name (prevents open-redirects)
-      const safeNext = next && /^[a-z-]+\.html$/.test(next) ? next : null;
+      const safeNext = next && /^[a-z-]+\.html(\?id=[0-9a-f-]{36})?$/.test(next) ? next : null;
       window.location.href = safeNext || HOME_BY_ROLE[profile?.role] || 'index.html';
     });
   </script>

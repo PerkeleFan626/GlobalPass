@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auction — GlobalPass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main class="container section">
+    <a href="auctions.html" class="back-link">← All auctions</a>
+    <div id="content"><div class="skeleton"></div></div>
+  </main>
+
+  <!-- Bid modal -->
+  <dialog class="modal" id="bid-modal" aria-labelledby="bid-title">
+    <form id="bid-form" novalidate>
+      <h2 id="bid-title">Place a bid</h2>
+      <p class="form-sub" id="bid-min"></p>
+      <label for="bid-amount" class="visually-hidden">Bid amount (NZD)</label>
+      <input id="bid-amount" type="number" inputmode="numeric" step="1" required>
+      <div class="quick" id="quick"></div>
+      <p class="form-msg" id="bid-msg" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="bid-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="bid-submit">Confirm bid</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module">
+    import { getAuction, getBids, minNextBid, placeBid } from './js/api.js';
+    import { getProfile } from './js/auth.js';
+    import { formatNZD, esc, timeLeft, startCountdowns } from './js/ui.js';
+
+    const id = new URLSearchParams(location.search).get('id');
+    const content = document.getElementById('content');
+    const modal = document.getElementById('bid-modal');
+    const form = document.getElementById('bid-form');
+    const amountInput = document.getElementById('bid-amount');
+    const bidMsg = document.getElementById('bid-msg');
+    const submitBtn = document.getElementById('bid-submit');
+
+    let auction = null;
+    let profile = null;
+
+    const isOpen = (a) => a.status === 'active' && new Date(a.end_time) > new Date();
+
+    // Bid panel state depends on who is looking and whether the auction is open
+    function bidPanel(a, bids) {
+      const current = Number(a.current_highest_bid) > 0 ? a.current_highest_bid : a.starting_price;
+      const leading = profile && a.highest_bidder_id === profile.profileid;
+      let action;
+
+      if (!isOpen(a)) {
+        action = `<button class="btn btn-block" disabled>Auction closed</button>`;
+      } else if (!profile) {
+        action = `<a class="btn btn-primary btn-block" href="login.html?next=${encodeURIComponent('auction.html?id=' + a.id)}">Log in to bid</a>`;
+      } else if (profile.role !== 'bidder') {
+        action = `<button class="btn btn-block" disabled>Only bidders can place bids</button>`;
+      } else {
+        action = `<button class="btn btn-primary btn-block" id="open-bid">Place bid</button>`;
+      }
+
+      return `
+        <aside class="panel">
+          <small class="muted">${Number(a.current_highest_bid) > 0 ? 'Current highest bid' : 'Starting price'}</small>
+          <p class="big-bid">${formatNZD(current)}</p>
+          <p class="countdown" data-end="${esc(a.end_time)}">⏱ ${timeLeft(a.end_time)}</p>
+          <p class="bid-note ${leading ? 'lead' : ''}">
+            ${leading ? '✓ You are the highest bidder' : `${bids.length} bid${bids.length === 1 ? '' : 's'} so far`}
+          </p>
+          ${action}
+        </aside>`;
+    }
+
+    function historyTable(bids) {
+      if (!bids.length) return '<p class="state">No bids yet. Be the first.</p>';
+      return `
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Bidder</th><th>Amount</th><th>Time</th></tr></thead>
+            <tbody>
+              ${bids.map((b, i) => {
+                const me = profile && b.bidder_id === profile.profileid;
+                // Other bidders stay anonymous (privacy) — only "You" is named
+                return `<tr>
+                  <td data-label="Bidder" class="${me ? 'history-me' : ''}">${me ? 'You' : 'Bidder #' + (bids.length - i)}</td>
+                  <td data-label="Amount">${formatNZD(b.amount)}</td>
+                  <td data-label="Time">${new Date(b.created_at).toLocaleString('en-NZ')}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    async function load() {
+      if (!id) {
+        content.innerHTML = '<p class="state error">No auction selected.</p>';
+        return;
+      }
+      try {
+        const [a, bids, p] = await Promise.all([getAuction(id), getBids(id).catch(() => []), getProfile()]);
+        auction = a;
+        profile = p;
+        document.title = `${a.country_name} — GlobalPass`;
+        content.innerHTML = `
+          <div class="detail">
+            <section class="panel">
+              <div class="detail-title">
+                <h1>${esc(a.country_name)} citizenship</h1>
+                <span class="badge badge-${esc(a.status)}">${esc(a.status)}</span>
+              </div>
+              <div class="facts">
+                <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
+                <div><small>Total bids</small><strong>${bids.length}</strong></div>
+                <div><small>Ends</small><strong>${new Date(a.end_time).toLocaleString('en-NZ')}</strong></div>
+                <div><small>Status</small><strong style="text-transform:capitalize">${esc(a.status)}</strong></div>
+              </div>
+            </section>
+            ${bidPanel(a, bids)}
+          </div>
+          <div class="section-head" style="margin-top:32px"><h2>Bid history</h2></div>
+          ${historyTable(bids)}`;
+        document.getElementById('open-bid')?.addEventListener('click', openModal);
+      } catch (err) {
+        console.error(err);
+        content.innerHTML = '<p class="state error">Auction not found or could not be loaded.</p>';
+      }
+    }
+
+    function openModal() {
+      const min = minNextBid(auction);
+      document.getElementById('bid-min').textContent = `Minimum bid: ${formatNZD(min)}`;
+      amountInput.min = min;
+      amountInput.value = min;
+      bidMsg.textContent = '';
+      document.getElementById('quick').innerHTML = [100, 500, 1000]
+        .map((n) => `<button type="button" class="btn btn-ghost" data-add="${n}">+${formatNZD(n)}</button>`)
+        .join('');
+      modal.showModal();
+      amountInput.focus();
+    }
+
+    document.getElementById('quick').addEventListener('click', (e) => {
+      const add = e.target.closest('[data-add]')?.dataset.add;
+      if (add) amountInput.value = Math.max(Number(amountInput.value) || 0, minNextBid(auction)) + Number(add);
+    });
+
+    document.getElementById('bid-cancel').addEventListener('click', () => modal.close());
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const amount = Number(amountInput.value);
+      const min = minNextBid(auction);
+
+      if (!isOpen(auction)) return showBidMsg('This auction has closed.');
+      if (!Number.isFinite(amount) || amount < min) return showBidMsg(`Bid must be at least ${formatNZD(min)}.`);
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Placing bid…';
+      try {
+        await placeBid(auction.id, amount);
+        showBidMsg('Bid placed!', true);
+        setTimeout(() => modal.close(), 700);
+        await load();
+      } catch (err) {
+        console.error(err);
+        // Database rejection message (e.g. someone outbid you first)
+        showBidMsg(err.message || 'Bid failed. Please try again.');
+        await load();
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm bid';
+      }
+    });
+
+    function showBidMsg(text, ok = false) {
+      bidMsg.textContent = text;
+      bidMsg.className = 'form-msg ' + (ok ? 'ok' : 'error');
+    }
+
+    await load();
+    startCountdowns();
+    // Refresh every 15s until Sprint 4 adds Realtime (live updates)
+    setInterval(() => { if (!modal.open) load(); }, 15000);
+  </script>
+</body>
+</html>
