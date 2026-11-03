@@ -16,7 +16,10 @@
   </header>
 
   <main class="container section">
-    <a href="auctions.html" class="back-link">← All auctions</a>
+    <div class="section-head" style="margin-bottom:0">
+      <a href="auctions.html" class="back-link">← All auctions</a>
+      <span class="live-badge" id="live-badge">○ Connecting…</span>
+    </div>
     <div id="content"><div class="skeleton"></div></div>
   </main>
 
@@ -44,6 +47,7 @@
     import { getAuction, getBids, minNextBid, placeBid } from './js/api.js';
     import { getProfile } from './js/auth.js';
     import { formatNZD, esc, timeLeft, startCountdowns } from './js/ui.js';
+    import { subscribeAuction, flash } from './js/realtime.js';
 
     const id = new URLSearchParams(location.search).get('id');
     const content = document.getElementById('content');
@@ -55,6 +59,7 @@
 
     let auction = null;
     let profile = null;
+    let lastPrice = null;
 
     const isOpen = (a) => a.status === 'active' && new Date(a.end_time) > new Date();
 
@@ -136,6 +141,19 @@
           <div class="section-head" style="margin-top:32px"><h2>Bid history</h2></div>
           ${historyTable(bids)}`;
         document.getElementById('open-bid')?.addEventListener('click', openModal);
+
+        // Live update: flash the price if it changed since last load
+        const price = Number(a.current_highest_bid);
+        if (lastPrice !== null && price !== lastPrice) flash(document.querySelector('.big-bid'));
+        lastPrice = price;
+
+        // If the bid popup is open and someone outbids, raise the minimum
+        if (modal.open) {
+          const min = minNextBid(a);
+          document.getElementById('bid-min').textContent = `Minimum bid: ${formatNZD(min)}`;
+          amountInput.min = min;
+          if (!isOpen(a)) showBidMsg('This auction has just closed.');
+        }
       } catch (err) {
         console.error(err);
         content.innerHTML = '<p class="state error">Auction not found or could not be loaded.</p>';
@@ -195,8 +213,10 @@
 
     await load();
     startCountdowns();
-    // Refresh every 15s until Sprint 4 adds Realtime (live updates)
-    setInterval(() => { if (!modal.open) load(); }, 15000);
+    // Sprint 4: instant updates via Supabase Realtime (WebSocket)
+    if (id) subscribeAuction(id, load);
+    // Safety net: slow refresh in case the live connection drops
+    setInterval(load, 60000);
   </script>
 </body>
 </html>
