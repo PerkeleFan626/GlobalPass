@@ -12,19 +12,14 @@
     <nav class="container nav" aria-label="Main">
       <a href="index.html" class="logo">Global<span>Pass</span></a>
       <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
-      <div class="nav-links">
-        <a href="index.html" class="active">Home</a>
-        <a href="auctions.html">Auctions</a>
-        <a href="login.html">Log in</a>
-        <a href="register.html" class="btn btn-primary">Sign up</a>
-      </div>
+      <div class="nav-links"></div>
     </nav>
   </header>
 
   <main>
     <section class="hero container">
       <h1>Bid on citizenship from<br><span>around the world</span></h1>
-      <p>Governments list citizenship opportunities. You place live bids. The highest bid wins when the clock hits zero.</p>
+      <p>Governments list citizenship allocations. You place live bids. The highest bid when the clock hits zero wins.</p>
       <div class="hero-actions">
         <a href="auctions.html" class="btn btn-primary">Browse auctions</a>
         <a href="register.html" class="btn btn-ghost">Create an account</a>
@@ -58,6 +53,7 @@
   <script type="module">
     import { getActiveAuctions } from './js/api.js';
     import { auctionCard, startCountdowns } from './js/ui.js';
+    import './js/auth.js';
 
     const box = document.getElementById('featured');
     try {

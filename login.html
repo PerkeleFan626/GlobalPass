@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in — GlobalPass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main class="container section">
+    <form class="form-card" id="login-form" novalidate>
+      <h1>Log in</h1>
+      <p class="form-sub">New here? <a href="register.html">Create an account</a></p>
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <p class="form-msg" id="msg" role="alert"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="submit">Log in</button>
+    </form>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+  </footer>
+
+  <script type="module" src="js/ui.js"></script>
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+    import { getProfile, redirectIfLoggedIn, HOME_BY_ROLE } from './js/auth.js';
+
+    redirectIfLoggedIn();
+
+    const form = document.getElementById('login-form');
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('submit');
+    const next = new URLSearchParams(location.search).get('next');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      if (!email || !password) {
+        msg.textContent = 'Enter your email and password.';
+        msg.className = 'form-msg error';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Logging in…';
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        btn.disabled = false;
+        btn.textContent = 'Log in';
+        msg.textContent = 'Incorrect email or password.';
+        msg.className = 'form-msg error';
+        return;
+      }
+
+      const profile = await getProfile();
+      // Only follow ?next= to a local page name (prevents open-redirects)
+      const safeNext = next && /^[a-z-]+\.html$/.test(next) ? next : null;
+      window.location.href = safeNext || HOME_BY_ROLE[profile?.role] || 'index.html';
+    });
+  </script>
+</body>
+</html>
