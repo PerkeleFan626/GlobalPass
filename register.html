@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign up — GlobalPass</title>
+  <title>Sign up | GlobalPass</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -29,10 +29,10 @@
       <label for="password">Password <small>(min 8 characters)</small></label>
       <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
 
-      <label for="role">I am a…</label>
+      <label for="role">I am a...</label>
       <select id="role" name="role" required>
-        <option value="bidder">Bidder — I want to bid on auctions</option>
-        <option value="government">Government official — I want to list citizenship</option>
+        <option value="bidder">Bidder (bid on auctions)</option>
+        <option value="government">Government official (list citizenship)</option>
       </select>
 
       <p class="form-msg" id="msg" role="alert"></p>
@@ -71,9 +71,8 @@
       if (password.length < 8) return show('Password must be at least 8 characters.');
 
       btn.disabled = true;
-      btn.textContent = 'Creating account…';
+      btn.textContent = 'Creating account...';
 
-      // name + role are passed as metadata; the database trigger copies them into profiles
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -86,7 +85,7 @@
       if (error) return show(error.message);
       if (!data.session) return show('Account created. Check your email to confirm, then log in.', true);
 
-      show('Account created! Redirecting…', true);
+      show('Account created! Redirecting...', true);
       setTimeout(() => (window.location.href = HOME_BY_ROLE[role]), 800);
     });
   </script>

@@ -1,6 +1,6 @@
-// Shared UI helpers used by every page.
+// ui helpers
 
-// Mobile nav toggle
+// mobile menu
 const toggle = document.querySelector('.nav-toggle');
 const links = document.querySelector('.nav-links');
 if (toggle && links) {
@@ -11,7 +11,7 @@ if (toggle && links) {
     toggle.textContent = open ? '✕' : '☰';
   };
   toggle.addEventListener('click', () => setMenu(!links.classList.contains('open')));
-  // Close after choosing a link, tapping outside, or pressing Escape
+  // close menu on link click, outside click or esc
   links.addEventListener('click', (e) => { if (e.target.closest('a, button')) setMenu(false); });
   document.addEventListener('click', (e) => {
     if (links.classList.contains('open') && !e.target.closest('.nav')) setMenu(false);
@@ -23,7 +23,7 @@ export function formatNZD(value) {
   return new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD', maximumFractionDigits: 0 }).format(Number(value) || 0);
 }
 
-// "2d 4h 10m 5s" until endTime, or "Ended"
+// time left until end
 export function timeLeft(endTime) {
   const ms = new Date(endTime) - Date.now();
   if (ms <= 0) return 'Ended';
@@ -35,14 +35,14 @@ export function timeLeft(endTime) {
   return `${d ? d + 'd ' : ''}${h}h ${m}m ${sec}s`;
 }
 
-// Escape text before inserting into HTML (stops XSS from database values)
+// escape text to prevent xss
 export function esc(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
   return div.innerHTML;
 }
 
-// One auction card — used on homepage and catalog
+// auction card
 export function auctionCard(a) {
   const current = Number(a.current_highest_bid) > 0 ? a.current_highest_bid : a.starting_price;
   return `
@@ -55,16 +55,17 @@ export function auctionCard(a) {
         <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
         <div><small>Current bid</small><strong class="current-bid">${formatNZD(current)}</strong></div>
       </div>
-      <p class="countdown" data-end="${esc(a.end_time)}">⏱ ${timeLeft(a.end_time)}</p>
+      <p class="countdown" data-end="${esc(a.end_time)}">${timeLeft(a.end_time) === 'Ended' ? 'Ended' : 'Ends in ' + timeLeft(a.end_time)}</p>
       <a class="btn btn-primary" href="auction.html?id=${encodeURIComponent(a.id)}">View &amp; bid</a>
     </article>`;
 }
 
-// Tick every countdown on the page once per second
+// update countdowns every second
 export function startCountdowns() {
   setInterval(() => {
     document.querySelectorAll('.countdown[data-end]').forEach((el) => {
-      el.textContent = '⏱ ' + timeLeft(el.dataset.end);
+      const t = timeLeft(el.dataset.end);
+      el.textContent = t === 'Ended' ? 'Ended' : 'Ends in ' + t;
     });
   }, 1000);
 }

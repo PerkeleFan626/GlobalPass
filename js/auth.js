@@ -1,7 +1,7 @@
-// Auth helpers: session, profile/role, page guards, logout, dynamic nav.
+// auth and navigation
 import { supabase } from './supabase.js';
 
-// Where each role lands after login
+// page for each role after login
 export const HOME_BY_ROLE = {
   bidder: 'auctions.html',
   government: 'create-auction.html',
@@ -13,7 +13,7 @@ export async function getUser() {
   return data.user ?? null;
 }
 
-// Logged-in user's profile row ({ profileid, email, name, role }) or null
+// get logged in user's profile
 export async function getProfile() {
   const user = await getUser();
   if (!user) return null;
@@ -23,14 +23,13 @@ export async function getProfile() {
     .eq('profileid', user.id)
     .single();
   if (error) {
-    console.error('Profile not found — is the sign-up trigger set up?', error);
+    console.error('Profile not found', error);
     return null;
   }
   return data;
 }
 
-// Page guard: call at the top of a protected page.
-// Redirects to login if logged out, or to the user's own home if wrong role.
+// only allow certain roles on a page
 export async function requireRole(allowedRoles) {
   const profile = await getProfile();
   if (!profile) {
@@ -44,7 +43,7 @@ export async function requireRole(allowedRoles) {
   return profile;
 }
 
-// Logged-out-only pages (login/register): send logged-in users home
+// redirect if already logged in
 export async function redirectIfLoggedIn() {
   const profile = await getProfile();
   if (profile) window.location.replace(HOME_BY_ROLE[profile.role] || 'index.html');
@@ -55,14 +54,13 @@ export async function logout() {
   window.location.href = 'index.html';
 }
 
-// Rebuild nav links based on who is logged in
+// build nav links
 export async function renderNav() {
   const links = document.querySelector('.nav-links');
   if (!links) return;
   const current = location.pathname.split('/').pop() || 'index.html';
   const link = ([href, label]) => `<a href="${href}"${href === current ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
 
-  // Show the basic links immediately so the header is never empty while loading
   const items = [['index.html', 'Home'], ['auctions.html', 'Auctions']];
   links.innerHTML = items.map(link).join('');
 
