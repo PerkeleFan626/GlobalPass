@@ -4,10 +4,19 @@
 const toggle = document.querySelector('.nav-toggle');
 const links = document.querySelector('.nav-links');
 if (toggle && links) {
-  toggle.addEventListener('click', () => {
-    const open = links.classList.toggle('open');
+  const setMenu = (open) => {
+    links.classList.toggle('open', open);
     toggle.setAttribute('aria-expanded', open);
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    toggle.textContent = open ? '✕' : '☰';
+  };
+  toggle.addEventListener('click', () => setMenu(!links.classList.contains('open')));
+  // Close after choosing a link, tapping outside, or pressing Escape
+  links.addEventListener('click', (e) => { if (e.target.closest('a, button')) setMenu(false); });
+  document.addEventListener('click', (e) => {
+    if (links.classList.contains('open') && !e.target.closest('.nav')) setMenu(false);
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
 }
 
 export function formatNZD(value) {

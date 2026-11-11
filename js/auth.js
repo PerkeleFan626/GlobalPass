@@ -60,15 +60,17 @@ export async function renderNav() {
   const links = document.querySelector('.nav-links');
   if (!links) return;
   const current = location.pathname.split('/').pop() || 'index.html';
-  const profile = await getProfile();
+  const link = ([href, label]) => `<a href="${href}"${href === current ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
 
+  // Show the basic links immediately so the header is never empty while loading
   const items = [['index.html', 'Home'], ['auctions.html', 'Auctions']];
+  links.innerHTML = items.map(link).join('');
+
+  const profile = await getProfile();
   if (profile?.role === 'government') items.push(['create-auction.html', 'My listings']);
   if (profile?.role === 'admin') items.push(['admin.html', 'Admin']);
 
-  let html = items
-    .map(([href, label]) => `<a href="${href}"${href === current ? ' class="active"' : ''}>${label}</a>`)
-    .join('');
+  let html = items.map(link).join('');
 
   if (profile) {
     const name = document.createElement('span');
@@ -76,8 +78,8 @@ export async function renderNav() {
     html += `<span class="nav-user">${name.innerHTML} · ${profile.role}</span>
              <button type="button" class="btn btn-ghost" id="logout-btn">Log out</button>`;
   } else {
-    html += `<a href="login.html"${current === 'login.html' ? ' class="active"' : ''}>Log in</a>
-             <a href="register.html" class="btn btn-primary">Sign up</a>`;
+    html += `${link(['login.html', 'Log in'])}
+             <a href="register.html" class="btn btn-primary nav-cta">Sign up</a>`;
   }
   links.innerHTML = html;
   document.getElementById('logout-btn')?.addEventListener('click', logout);
