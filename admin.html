@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin — GlobalPass</title>
+  <title>Admin | GlobalPass</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <main class="container section" id="page" hidden>
     <div class="section-head">
       <h2>Admin dashboard</h2>
-      <span class="live-badge" id="live-badge">○ Connecting…</span>
+      <span class="live-badge" id="live-badge">○ Connecting...</span>
     </div>
 
     <div class="tabs" role="tablist">
@@ -46,18 +46,18 @@
           <thead>
             <tr><th>Country</th><th>Status</th><th>Starting</th><th>Current bid</th><th>Ends</th><th></th></tr>
           </thead>
-          <tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <tbody id="rows"><tr><td colspan="6">Loading...</td></tr></tbody>
         </table>
       </div>
     </section>
 
     <!-- Users tab -->
     <section id="tab-users" hidden>
-      <input type="search" id="user-search" class="select-sm" style="width:100%;margin-bottom:12px" placeholder="Search by name or email…" aria-label="Search users">
+      <input type="search" id="user-search" class="select-sm" style="width:100%;margin-bottom:12px" placeholder="Search by name or email..." aria-label="Search users">
       <div class="table-wrap">
         <table class="table">
           <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Role</th></tr></thead>
-          <tbody id="user-rows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          <tbody id="user-rows"><tr><td colspan="4">Loading...</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -81,7 +81,7 @@
       const msg = document.getElementById('msg');
       const show = (text, ok = false) => { msg.textContent = text; msg.className = 'form-msg ' + (ok ? 'ok' : 'error'); };
 
-      // ---------- Tabs ----------
+      // tabs
       document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach((t) => {
           const on = t === tab;
@@ -93,7 +93,7 @@
         if (tab.dataset.tab === 'users') loadUsers();
       }));
 
-      // ---------- Auctions ----------
+      // auctions
       const rows = document.getElementById('rows');
       const filter = document.getElementById('filter');
       let auctions = [];
@@ -132,7 +132,7 @@
         renderAuctions();
       }
 
-      // Two-click confirm instead of a browser popup
+      // click twice to confirm
       rows.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-cancel]');
         if (!btn) return;
@@ -151,7 +151,7 @@
 
       filter.addEventListener('change', renderAuctions);
 
-      // ---------- Users ----------
+      // users
       const userRows = document.getElementById('user-rows');
       const userSearch = document.getElementById('user-search');
       let users = [];
@@ -195,7 +195,6 @@
         const user = users.find((u) => u.profileid === sel.dataset.user);
         const oldRole = user.role;
         sel.disabled = true;
-        // .select() returns the updated row — empty means the database blocked it (RLS)
         const { data, error } = await supabase
           .from('profiles').update({ role: sel.value }).eq('profileid', sel.dataset.user).select();
         sel.disabled = false;
@@ -211,7 +210,7 @@
       userSearch.addEventListener('input', renderUsers);
 
       loadAuctions();
-      subscribeAuctions(loadAuctions);   // live: new listings, bids and cancellations
+      subscribeAuctions(loadAuctions);
     }
   </script>
 </body>

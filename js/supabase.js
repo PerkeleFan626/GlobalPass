@@ -1,5 +1,4 @@
-// Shared Supabase client — every page imports this one connection.
-// The publishable key is safe in frontend code; RLS decides what it can read/write.
+// supabase client used by all pages
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = 'https://oilpmlqumzdonmnxjuvv.supabase.co';
