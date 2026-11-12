@@ -1,36 +1,32 @@
-// Sprint 4: Supabase Realtime — the database pushes changes to the browser
-// over a WebSocket, so prices update instantly without refreshing.
-// Requires Realtime to be enabled for the auctions + bids tables (Sebastian).
+// realtime updates
 import { supabase } from './supabase.js';
 
-// Small "● Live" indicator — shows whether the WebSocket is connected
+// live badge
 function setLiveBadge(status) {
   const el = document.getElementById('live-badge');
   if (!el) return;
   const live = status === 'SUBSCRIBED';
   el.classList.toggle('on', live);
-  el.textContent = live ? '● Live' : '○ Reconnecting…';
-  el.title = live ? 'Prices update instantly' : 'Live updates paused — refreshing periodically';
+  el.textContent = live ? '● Live' : '○ Reconnecting...';
+  el.title = live ? 'Prices update instantly' : 'Live updates paused';
 }
 
-// Run fn at most once per `ms` (bursts of bids → one reload)
 function debounce(fn, ms = 400) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-// Listen to ONE auction and its bids (auction detail page)
+// listen to one auction and its bids
 export function subscribeAuction(auctionId, onChange) {
   const cb = debounce(onChange);
   return supabase
     .channel('auction-' + auctionId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'auctions', filter: `id=eq.${auctionId}` }, cb)
-    // column is spelt "acution_id" in the database
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `acution_id=eq.${auctionId}` }, cb)
     .subscribe(setLiveBadge);
 }
 
-// Listen to ALL auctions (homepage, catalog, admin)
+// listen to all auctions
 export function subscribeAuctions(onChange) {
   const cb = debounce(onChange);
   return supabase
@@ -39,10 +35,10 @@ export function subscribeAuctions(onChange) {
     .subscribe(setLiveBadge);
 }
 
-// Brief green flash on an element whose value just changed
+// flash when price changes
 export function flash(el) {
   if (!el) return;
   el.classList.remove('flash');
-  void el.offsetWidth; // restart animation
+  void el.offsetWidth;
   el.classList.add('flash');
 }

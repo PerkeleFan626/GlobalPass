@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auction — GlobalPass</title>
+  <title>Auction | GlobalPass</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <main class="container section">
     <div class="section-head" style="margin-bottom:0">
       <a href="auctions.html" class="back-link">← All auctions</a>
-      <span class="live-badge" id="live-badge">○ Connecting…</span>
+      <span class="live-badge" id="live-badge">○ Connecting...</span>
     </div>
     <div id="content"><div class="skeleton"></div></div>
   </main>
@@ -63,7 +63,6 @@
 
     const isOpen = (a) => a.status === 'active' && new Date(a.end_time) > new Date();
 
-    // Bid panel state depends on who is looking and whether the auction is open
     function bidPanel(a, bids) {
       const current = Number(a.current_highest_bid) > 0 ? a.current_highest_bid : a.starting_price;
       const leading = profile && a.highest_bidder_id === profile.profileid;
@@ -83,9 +82,9 @@
         <aside class="panel">
           <small class="muted">${Number(a.current_highest_bid) > 0 ? 'Current highest bid' : 'Starting price'}</small>
           <p class="big-bid">${formatNZD(current)}</p>
-          <p class="countdown" data-end="${esc(a.end_time)}">⏱ ${timeLeft(a.end_time)}</p>
+          <p class="countdown" data-end="${esc(a.end_time)}">${timeLeft(a.end_time) === 'Ended' ? 'Ended' : 'Ends in ' + timeLeft(a.end_time)}</p>
           <p class="bid-note ${leading ? 'lead' : ''}">
-            ${leading ? '✓ You are the highest bidder' : `${bids.length} bid${bids.length === 1 ? '' : 's'} so far`}
+            ${leading ? 'You are the highest bidder' : `${bids.length} bid${bids.length === 1 ? '' : 's'} so far`}
           </p>
           ${action}
         </aside>`;
@@ -100,7 +99,6 @@
             <tbody>
               ${bids.map((b, i) => {
                 const me = profile && b.bidder_id === profile.profileid;
-                // Other bidders stay anonymous (privacy) — only "You" is named
                 return `<tr>
                   <td data-label="Bidder" class="${me ? 'history-me' : ''}">${me ? 'You' : 'Bidder #' + (bids.length - i)}</td>
                   <td data-label="Amount">${formatNZD(b.amount)}</td>
@@ -121,7 +119,7 @@
         const [a, bids, p] = await Promise.all([getAuction(id), getBids(id).catch(() => []), getProfile()]);
         auction = a;
         profile = p;
-        document.title = `${a.country_name} — GlobalPass`;
+        document.title = `${a.country_name} | GlobalPass`;
         content.innerHTML = `
           <div class="detail">
             <section class="panel">
@@ -142,12 +140,10 @@
           ${historyTable(bids)}`;
         document.getElementById('open-bid')?.addEventListener('click', openModal);
 
-        // Live update: flash the price if it changed since last load
         const price = Number(a.current_highest_bid);
         if (lastPrice !== null && price !== lastPrice) flash(document.querySelector('.big-bid'));
         lastPrice = price;
 
-        // If the bid popup is open and someone outbids, raise the minimum
         if (modal.open) {
           const min = minNextBid(a);
           document.getElementById('bid-min').textContent = `Minimum bid: ${formatNZD(min)}`;
@@ -189,7 +185,7 @@
       if (!Number.isFinite(amount) || amount < min) return showBidMsg(`Bid must be at least ${formatNZD(min)}.`);
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Placing bid…';
+      submitBtn.textContent = 'Placing bid...';
       try {
         await placeBid(auction.id, amount);
         showBidMsg('Bid placed!', true);
@@ -197,7 +193,6 @@
         await load();
       } catch (err) {
         console.error(err);
-        // Database rejection message (e.g. someone outbid you first)
         showBidMsg(err.message || 'Bid failed. Please try again.');
         await load();
       } finally {
@@ -213,9 +208,7 @@
 
     await load();
     startCountdowns();
-    // Sprint 4: instant updates via Supabase Realtime (WebSocket)
     if (id) subscribeAuction(id, load);
-    // Safety net: slow refresh in case the live connection drops
     setInterval(load, 60000);
   </script>
 </body>

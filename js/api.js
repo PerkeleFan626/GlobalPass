@@ -1,10 +1,9 @@
-// Read-only data helpers for the frontend.
-// Sebastian can replace these with his Sprint 2 helper methods later — pages only call these names.
+// data functions
 import { supabase } from './supabase.js';
 
 const AUCTION_FIELDS = 'id, country_name, starting_price, current_highest_bid, end_time, status';
 
-// Active auctions ending soonest first
+// active auctions, ending soonest first
 export async function getActiveAuctions(limit = null) {
   let query = supabase
     .from('auctions')
@@ -17,7 +16,7 @@ export async function getActiveAuctions(limit = null) {
   return data;
 }
 
-// All auctions with optional search + status filter (catalog page)
+// auctions for the catalog (search, filter, sort)
 export async function getAuctions({ search = '', status = 'all', sort = 'ending' } = {}) {
   let query = supabase.from('auctions').select(AUCTION_FIELDS);
   if (status !== 'all') query = query.eq('status', status);
@@ -35,9 +34,7 @@ export async function getAuctions({ search = '', status = 'all', sort = 'ending'
   return data;
 }
 
-// ---------- Sprint 3: auction detail + bidding ----------
-
-// One auction by id
+// get one auction
 export async function getAuction(id) {
   const { data, error } = await supabase
     .from('auctions')
@@ -48,8 +45,7 @@ export async function getAuction(id) {
   return data;
 }
 
-// Bid history for an auction, highest first.
-// NOTE: the column is spelt "acution_id" in the database — keep it until Sebastian renames it.
+// bids for an auction, highest first
 export async function getBids(auctionId) {
   const { data, error } = await supabase
     .from('bids')
@@ -60,16 +56,13 @@ export async function getBids(auctionId) {
   return data;
 }
 
-// Lowest bid the user is allowed to place
+// lowest allowed bid
 export function minNextBid(auction) {
   const current = Number(auction.current_highest_bid) || 0;
   return current > 0 ? current + 1 : Number(auction.starting_price);
 }
 
-// ---- BID CONTRACT — confirm the parameter names with Sebastian ----
-// Calls the database function process_bid, which validates and saves the bid
-// (auction still open, amount higher than current bid) in one safe step.
-// If Sebastian's parameter names differ, change ONLY the object below.
+// place a bid using the process_bid function in the database
 export async function placeBid(auctionId, amount) {
   const { data, error } = await supabase.rpc('process_bid', {
     p_auction_id: auctionId,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Log in — GlobalPass</title>
+  <title>Log in | GlobalPass</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -58,7 +58,7 @@
       }
 
       btn.disabled = true;
-      btn.textContent = 'Logging in…';
+      btn.textContent = 'Logging in...';
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -70,7 +70,6 @@
       }
 
       const profile = await getProfile();
-      // Only follow ?next= to a local page name (prevents open-redirects)
       const safeNext = next && /^[a-z-]+\.html(\?id=[0-9a-f-]{36})?$/.test(next) ? next : null;
       window.location.href = safeNext || HOME_BY_ROLE[profile?.role] || 'index.html';
     });
