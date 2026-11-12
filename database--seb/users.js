@@ -1,60 +1,29 @@
 import { supabase } from './database.js';
-
-let activeDummyUser = null;
-
-export function setActiveDummyUser(dummyUser) {
-    activeDummyUser = dummyUser;
-}
+import { getActiveDummyUser } from './dummyUsers.js';
 
 export async function getCurrentUser() {
-    if (activeDummyUser) {
-        return activeDummyUser;
+    const dummyUser = getActiveDummyUser();
+    if (dummyUser) {
+        return dummyUser;
     }
 
-    const {data: {user}, error} = await supabase.auth.getUser();
+    const {data: {user}, error: authError} = await supabase.auth.getUser();
 
-    if (error || !user) {
+    if (authError || !user) {
         return null;
     }
 
-    const{data: profile} = await supabase
+    const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
-    return profile || user;
-}
+  if (profileError) {
+    console.error('Failed to load profile for authenticated user:', profileError.message);
+    return null;
+  }
 
-export async function getTestProfiles() {
-    const{data, error} = await supabase
-    .from('profiles')
-    .select('id, name, email, role, represented_country')
-    .order('name', { ascending: true });
+  return profile;
 
-    if(error) {
-        console.error('Error fetching test profiles', error.message);
-        return[];
-    }
-    return data;
-}
-
-export async function createDummyUser({name, email, role, country}) {
-    if (!name || !email || !role || !country) {
-        console.error('All fields need to be filled');
-        return null;
-    }
-
-    const{data, error} = await supabase.rpc('create_dummy_user', {
-        dummy_name: name,
-        dummy_email: email,
-        dummy_role: role,
-        dummy_country: country
-    });
-
-    if(error) {
-        console.error('Error creating dummy user:', error.message);
-        return null;
-    }
-    return data;
 }

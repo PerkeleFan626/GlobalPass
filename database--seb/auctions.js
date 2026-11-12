@@ -1,5 +1,5 @@
-import { supabase } from './database.js';
-import { getCurrentUser, getTestProfiles } from './users.js';
+import {supabase} from './database.js';
+import {getCurrentUser} from './users.js';
 
 export async function createAuction({country_name, starting_price, end_time}) {
     const user = await getCurrentUser();
@@ -11,6 +11,12 @@ export async function createAuction({country_name, starting_price, end_time}) {
     
     }
 
+    if (user.role !== 'government') {
+    const errorMsg = 'Only government accounts can create auctions.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
     const representedCountry = (country_name || user.represented_country || '').trim();
     if (!representedCountry) {
         const errorMsg = 'country_name is missing. Please enter a country or select a profile with a represented_country';
@@ -19,8 +25,8 @@ export async function createAuction({country_name, starting_price, end_time}) {
     }
 
     const price = Number(starting_price);
-    if (isNaN(price) || price<0) {
-        const errorMsg = 'Starting price must be <0';
+    if (isNaN(price) || price <=0 ) {
+        const errorMsg = 'Starting price must be greater than 0';
         console.error(errorMsg);
         return{success: false, error: errorMsg};
     }
