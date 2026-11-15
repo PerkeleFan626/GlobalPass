@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About and contact | GlobalPass</title>
+  <meta name="description" content="Who built GlobalPass and how to contact the team.">
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Main">
+      <a href="index.html" class="logo">Global<span>Pass</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main class="container section">
+    <section class="about-hero">
+      <h1>About GlobalPass</h1>
+      <p>GlobalPass is an auction website where governments list citizenship spots and people bid for them live. The highest bid when the timer ends wins.</p>
+    </section>
+
+    <section class="section" aria-labelledby="what-heading">
+      <div class="section-head"><h2 id="what-heading">What you can do here</h2></div>
+      <div class="steps">
+        <div class="step"><h3>Bidders</h3><p>Browse open auctions, place bids and watch the price change live.</p></div>
+        <div class="step"><h3>Government officials</h3><p>List a citizenship spot with a starting price and an end time.</p></div>
+        <div class="step"><h3>Admins</h3><p>Look after the site: see all auctions and users, and cancel listings.</p></div>
+      </div>
+      <p class="note">GlobalPass is a student project. The auctions are not real and no money is taken.</p>
+    </section>
+
+    <section class="section" aria-labelledby="team-heading">
+      <div class="section-head"><h2 id="team-heading">Our team</h2></div>
+      <div class="team">
+        <article class="member">
+          <div class="avatar" aria-hidden="true">A</div>
+          <h3>Ayush</h3>
+          <p class="muted">Frontend engineer</p>
+          <p>Builds the pages, the design and everything you click on.</p>
+          <a href="https://github.com/WAyush003" target="_blank" rel="noopener">GitHub profile</a>
+        </article>
+        <article class="member">
+          <div class="avatar" aria-hidden="true">S</div>
+          <h3>Sebastian</h3>
+          <p class="muted">Backend engineer and Scrum Master</p>
+          <p>Builds the database, the bidding rules and the security.</p>
+          <a href="https://github.com/PerkeleFan626" target="_blank" rel="noopener">GitHub profile</a>
+        </article>
+      </div>
+      <p class="note">We are software students at Yoobee College of Creative Innovation in Auckland, New Zealand.</p>
+    </section>
+
+    <section class="section" id="contact" aria-labelledby="contact-heading">
+      <div class="section-head"><h2 id="contact-heading">Contact us</h2></div>
+      <div class="contact">
+        <form class="form-card contact-form" id="contact-form" novalidate>
+          <label for="c-name">Your name</label>
+          <input id="c-name" name="name" type="text" autocomplete="name" required>
+
+          <label for="c-email">Your email</label>
+          <input id="c-email" name="email" type="email" autocomplete="email" required>
+
+          <label for="c-topic">Topic</label>
+          <select id="c-topic" name="topic">
+            <option>Question</option>
+            <option>Report a problem</option>
+            <option>Feedback</option>
+          </select>
+
+          <label for="c-message">Message</label>
+          <textarea id="c-message" name="message" rows="5" required></textarea>
+
+          <p class="form-msg" id="msg" role="alert"></p>
+          <button type="submit" class="btn btn-primary btn-block">Send message</button>
+        </form>
+
+        <div class="contact-info">
+          <h3>Other ways to reach us</h3>
+          <p>Found a bug? Open an issue on our GitHub project.</p>
+          <a class="btn btn-ghost" href="https://github.com/PerkeleFan626/GlobalPass/issues" target="_blank" rel="noopener">Open GitHub issues</a>
+          <h3>Where we are</h3>
+          <p>Yoobee College of Creative Innovation<br>Auckland, New Zealand</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
+  </footer>
+
+  <script type="module">
+    import './js/ui.js';
+    import './js/auth.js';
+
+    // the address the contact form sends to
+    const CONTACT_EMAIL = 'team@globalpass.example';
+
+    const form = document.getElementById('contact-form');
+    const msg = document.getElementById('msg');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = form.name.value.trim();
+      const email = form.email.value.trim();
+      const message = form.message.value.trim();
+
+      if (!name || !email || !message) {
+        msg.textContent = 'Please fill in your name, email and message.';
+        msg.className = 'form-msg error';
+        return;
+      }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        msg.textContent = 'That email does not look right.';
+        msg.className = 'form-msg error';
+        return;
+      }
+
+      // we have no mail server, so the message opens in the visitor's own email app
+      const subject = encodeURIComponent(`GlobalPass ${form.topic.value} from ${name}`);
+      const body = encodeURIComponent(`${message}\n\nFrom: ${name} (${email})`);
+      window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+
+      msg.textContent = 'Your email app should open with the message ready to send.';
+      msg.className = 'form-msg ok';
+    });
+  </script>
+</body>
+</html>

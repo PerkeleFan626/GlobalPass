@@ -22,7 +22,7 @@ export function subscribeAuction(auctionId, onChange) {
   return supabase
     .channel('auction-' + auctionId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'auctions', filter: `id=eq.${auctionId}` }, cb)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `acution_id=eq.${auctionId}` }, cb)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `auction_id=eq.${auctionId}` }, cb)
     .subscribe(setLiveBadge);
 }
 

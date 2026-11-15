@@ -1,39 +1,26 @@
-// auth and navigation
-import { supabase } from './supabase.js';
+// login state, page guards and the top menu
+// the real login work is done by the backend functions
+import { getCurrentUser } from '../database--seb/users.js';
+import { logoutUser } from '../database--seb/login.js';
 
-// page for each role after login
+// first page for each role after login
 export const HOME_BY_ROLE = {
   bidder: 'auctions.html',
   government: 'create-auction.html',
   admin: 'admin.html',
 };
 
-export async function getUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
-}
-
-// get logged in user's profile
+// profile of the logged in user, or null
 export async function getProfile() {
-  const user = await getUser();
-  if (!user) return null;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('profileid, email, name, role')
-    .eq('profileid', user.id)
-    .single();
-  if (error) {
-    console.error('Profile not found', error);
-    return null;
-  }
-  return data;
+  return getCurrentUser();
 }
 
-// only allow certain roles on a page
+// only let some roles open a page, send everyone else away
 export async function requireRole(allowedRoles) {
   const profile = await getProfile();
   if (!profile) {
-    window.location.replace('login.html?next=' + encodeURIComponent(location.pathname.split('/').pop()));
+    const page = location.pathname.split('/').pop();
+    window.location.replace('login.html?next=' + encodeURIComponent(page));
     return null;
   }
   if (!allowedRoles.includes(profile.role)) {
@@ -43,25 +30,27 @@ export async function requireRole(allowedRoles) {
   return profile;
 }
 
-// redirect if already logged in
+// login and sign up pages are not for logged in users
 export async function redirectIfLoggedIn() {
   const profile = await getProfile();
   if (profile) window.location.replace(HOME_BY_ROLE[profile.role] || 'index.html');
 }
 
 export async function logout() {
-  await supabase.auth.signOut();
+  await logoutUser();
   window.location.href = 'index.html';
 }
 
-// build nav links
+// build the menu links for the current user
 export async function renderNav() {
   const links = document.querySelector('.nav-links');
   if (!links) return;
   const current = location.pathname.split('/').pop() || 'index.html';
-  const link = ([href, label]) => `<a href="${href}"${href === current ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
+  const link = ([href, label]) =>
+    `<a href="${href}"${href === current ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
 
-  const items = [['index.html', 'Home'], ['auctions.html', 'Auctions']];
+  // show the public links first so the menu is not empty while loading
+  const items = [['index.html', 'Home'], ['auctions.html', 'Auctions'], ['about.html', 'About']];
   links.innerHTML = items.map(link).join('');
 
   const profile = await getProfile();

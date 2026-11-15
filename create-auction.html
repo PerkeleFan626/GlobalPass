@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My listings | GlobalPass</title>
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -18,7 +19,7 @@
   <main class="container section" id="page" hidden>
     <form class="form-card" id="auction-form" novalidate>
       <h1>List a citizenship auction</h1>
-      <p class="form-sub">Bidding opens immediately and closes at the end time.</p>
+      <p class="form-sub">Bidding opens right away and closes at the end time.</p>
 
       <label for="country">Country</label>
       <input id="country" name="country" type="text" maxlength="80" required>
@@ -38,14 +39,15 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
   </footer>
 
   <script type="module">
-    import { supabase } from './js/supabase.js';
+    import { createAuction, getMyAuctions } from './js/api.js';
     import { requireRole } from './js/auth.js';
     import { auctionCard, startCountdowns } from './js/ui.js';
 
+    // only government users can open this page
     const profile = await requireRole(['government']);
     if (profile) init(profile);
 
@@ -56,9 +58,13 @@
       const btn = document.getElementById('submit');
       const end = document.getElementById('end');
 
+      // start with the country this account represents
+      form.country.value = profile.represented_country || '';
+
+      // the end time has to be at least 5 minutes from now
       const pad = (n) => String(n).padStart(2, '0');
-      const now = new Date(Date.now() + 60 * 60 * 1000);
-      end.min = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const soon = new Date(Date.now() + 5 * 60 * 1000);
+      end.min = `${soon.getFullYear()}-${pad(soon.getMonth() + 1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`;
 
       function show(text, ok = false) {
         msg.textContent = text;
@@ -67,18 +73,15 @@
 
       async function loadMine() {
         const box = document.getElementById('mine');
-        const { data, error } = await supabase
-          .from('auctions')
-          .select('id, country_name, starting_price, current_highest_bid, end_time, status')
-          .eq('created_by', profile.profileid)
-          .order('created_at', { ascending: false });
-        if (error) {
+        try {
+          const auctions = await getMyAuctions(profile.id);
+          box.innerHTML = auctions.length
+            ? auctions.map(auctionCard).join('')
+            : '<p class="state">You have no listings yet.</p>';
+        } catch (err) {
+          console.error(err);
           box.innerHTML = '<p class="state error">Could not load your listings.</p>';
-          return;
         }
-        box.innerHTML = data.length
-          ? data.map(auctionCard).join('')
-          : '<p class="state">You have no listings yet.</p>';
       }
 
       form.addEventListener('submit', async (e) => {
@@ -94,19 +97,19 @@
         btn.disabled = true;
         btn.textContent = 'Creating...';
 
-        const { error } = await supabase.from('auctions').insert({
+        const result = await createAuction({
           country_name: country,
           starting_price: price,
           end_time: endTime.toISOString(),
-          created_by: profile.profileid,
         });
 
         btn.disabled = false;
         btn.textContent = 'Create auction';
 
-        if (error) return show('Could not create auction: ' + error.message);
+        if (!result.success) return show('Could not create auction: ' + (result.error || 'please try again.'));
         show('Auction created!', true);
         form.reset();
+        form.country.value = profile.represented_country || '';
         loadMine();
       });
 

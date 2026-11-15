@@ -34,22 +34,28 @@ Admin cannot be chosen at sign-up - it is granted manually in the database to pr
 ```
 index.html            Homepage - hero, ending-soon auctions, how it works
 auctions.html         Auction catalog - search, filter, sort, live countdowns
-auction.html          Auction detail - bid panel, bid popup, bid history
-register.html         Sign up (Bidder or Government)
+auction.html          Auction detail - flag, bid panel, bid popup, bid history
+register.html         Sign up (Bidder or Government with the country they represent)
 login.html            Log in, redirects by role
+forgot-password.html  Ask for a password reset email
+reset-password.html   Set a new password from the email link
 create-auction.html   Government only - create and view listings
-admin.html            Admin only - auctions tab and users tab
+admin.html            Admin only - auctions, users and archive tabs
+about.html            About us, the team and the contact form
 ```
 
 ## Code structure
 
 ```
 css/style.css         All styles, mobile-first with breakpoints at 640px and 960px
-js/supabase.js        Shared Supabase client (project URL + publishable key)
-js/api.js             Data functions: getAuctions, getAuction, getBids, placeBid
-js/auth.js            Session, profile/role, page guards, logout, dynamic navigation
+images/               Hero picture, tab icon and the placeholder for unknown flags
+js/supabase.js        Shares the Supabase client from the backend folder
+js/api.js             Data functions for the pages (auctions, bids, archive)
+js/auth.js            Logged in user, page guards, logout, the top menu
 js/ui.js              Auction cards, countdowns, NZD formatting, XSS escaping, mobile menu
+js/countries.js       Country name to flag picture
 js/realtime.js        Supabase Realtime subscriptions and the "Live" indicator
+database--seb/        Backend functions: sign up, login, password reset, auctions, archive
 database/             SQL scripts for the Supabase backend
 ```
 
@@ -70,7 +76,7 @@ The JavaScript uses ES modules, so the site must be served (opening the file dir
 | Supabase | Hosted PostgreSQL with built-in Auth, Row-Level Security and Realtime on the free tier |
 | GitHub | Version control, branches and pull requests for team collaboration |
 
-**Note:** the key in `js/supabase.js` is Supabase's *publishable* key, which is designed to be public. Access is controlled by Row-Level Security rules in the database. The secret key is never used in frontend code.
+**Note:** the key in `database--seb/database.js` is Supabase's *publishable* key, which is designed to be public. Access is controlled by Row-Level Security rules in the database. The secret key is never used in frontend code.
 
 ## Team
 

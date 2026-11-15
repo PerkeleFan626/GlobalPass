@@ -1,4 +1,6 @@
-// ui helpers
+// ui helpers: menu, money, time, cards
+import { flagUrl } from './countries.js';
+import { shownStatus } from './api.js';
 
 // mobile menu
 const toggle = document.querySelector('.nav-toggle');
@@ -42,21 +44,31 @@ export function esc(str) {
   return div.innerHTML;
 }
 
-// auction card
+// text for the countdown line
+export function countdownText(endTime) {
+  const t = timeLeft(endTime);
+  return t === 'Ended' ? 'Ended' : 'Ends in ' + t;
+}
+
+// auction card used on the homepage, the catalog and my listings
 export function auctionCard(a) {
   const current = Number(a.current_highest_bid) > 0 ? a.current_highest_bid : a.starting_price;
+  const status = shownStatus(a);
   return `
     <article class="card" data-id="${esc(a.id)}">
-      <div class="card-top">
+      <div class="card-img">
+        <img src="${esc(flagUrl(a.country_name))}" alt="Flag of ${esc(a.country_name)}" loading="lazy" data-flag>
+        <span class="badge badge-${esc(status)}">${esc(status)}</span>
+      </div>
+      <div class="card-body">
         <h3>${esc(a.country_name)}</h3>
-        <span class="badge badge-${esc(a.status)}">${esc(a.status)}</span>
+        <div class="price-row">
+          <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
+          <div><small>Current bid</small><strong class="current-bid">${formatNZD(current)}</strong></div>
+        </div>
+        <p class="countdown" data-end="${esc(a.end_time)}">${countdownText(a.end_time)}</p>
+        <a class="btn btn-primary" href="auction.html?id=${encodeURIComponent(a.id)}">${status === 'active' ? 'View &amp; bid' : 'View auction'}</a>
       </div>
-      <div class="price-row">
-        <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
-        <div><small>Current bid</small><strong class="current-bid">${formatNZD(current)}</strong></div>
-      </div>
-      <p class="countdown" data-end="${esc(a.end_time)}">${timeLeft(a.end_time) === 'Ended' ? 'Ended' : 'Ends in ' + timeLeft(a.end_time)}</p>
-      <a class="btn btn-primary" href="auction.html?id=${encodeURIComponent(a.id)}">View &amp; bid</a>
     </article>`;
 }
 
@@ -64,8 +76,7 @@ export function auctionCard(a) {
 export function startCountdowns() {
   setInterval(() => {
     document.querySelectorAll('.countdown[data-end]').forEach((el) => {
-      const t = timeLeft(el.dataset.end);
-      el.textContent = t === 'Ended' ? 'Ended' : 'Ends in ' + t;
+      el.textContent = countdownText(el.dataset.end);
     });
   }, 1000);
 }

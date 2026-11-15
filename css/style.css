@@ -209,3 +209,53 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.6); }
   .nav-links .btn { margin-top: 0; margin-left: 6px; }
   .nav-user { margin-left: 8px; }
 }
+
+/* images: hero picture, flag on cards and on the auction page */
+.hero { text-align: left; display: grid; gap: 24px; align-items: center; }
+.hero p { margin-left: 0; }
+.hero-actions { align-items: stretch; }
+.hero-img { width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+.card { padding: 0; gap: 0; overflow: hidden; }
+.card-img { position: relative; aspect-ratio: 16 / 9; background: var(--surface-2); }
+.card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-img .badge { position: absolute; top: 10px; left: 10px; background: rgba(14, 17, 22, 0.85); }
+.card-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.detail-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; margin-bottom: 20px; background: var(--surface-2); }
+
+/* forms: extra links and the contact form */
+.form-foot { text-align: center; margin-top: 12px; font-size: 0.9rem; }
+.form-foot a { color: var(--accent); }
+.form-card textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 11px 12px; font-size: 1rem; font-family: inherit; resize: vertical; }
+.form-card textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#country-field { display: flex; flex-direction: column; gap: 6px; }
+#country-field[hidden] { display: none; }
+
+/* about and contact page */
+.about-hero { padding: 24px 0 8px; max-width: 720px; }
+.about-hero h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); margin-bottom: 12px; }
+.about-hero p { color: var(--muted); font-size: 1.05rem; }
+.note { color: var(--muted); font-size: 0.9rem; margin-top: 16px; }
+.team { display: grid; gap: 16px; grid-template-columns: 1fr; }
+.member { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+.member a { color: var(--accent); font-weight: 600; margin-top: 6px; }
+.avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--surface-2); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 1.2rem; margin-bottom: 6px; }
+.contact { display: grid; gap: 24px; grid-template-columns: 1fr; align-items: start; }
+.contact-form { max-width: none; margin: 0; }
+.contact-info { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.contact-info h3 { margin-top: 8px; }
+.contact-info p { color: var(--muted); }
+.site-footer a { color: var(--accent); }
+
+@media (min-width: 640px) {
+  .team { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 960px) {
+  .hero { grid-template-columns: 1.2fr 1fr; }
+  .contact { grid-template-columns: 3fr 2fr; }
+}
+@media (min-width: 640px) {
+  .hero-actions { justify-content: flex-start; }
+}
+
+/* keep the side space on phones for blocks that are also a section or the hero */
+.container { padding-left: 16px; padding-right: 16px; }

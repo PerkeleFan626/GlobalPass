@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Auction | GlobalPass</title>
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,7 +24,7 @@
     <div id="content"><div class="skeleton"></div></div>
   </main>
 
-  <!-- Bid modal -->
+  <!-- bid popup -->
   <dialog class="modal" id="bid-modal" aria-labelledby="bid-title">
     <form id="bid-form" novalidate>
       <h2 id="bid-title">Place a bid</h2>
@@ -40,13 +41,14 @@
   </dialog>
 
   <footer class="site-footer">
-    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
   </footer>
 
   <script type="module">
-    import { getAuction, getBids, minNextBid, placeBid } from './js/api.js';
+    import { getAuction, getBids, minNextBid, currentPrice, placeBid, isOpen, shownStatus } from './js/api.js';
     import { getProfile } from './js/auth.js';
-    import { formatNZD, esc, timeLeft, startCountdowns } from './js/ui.js';
+    import { formatNZD, esc, countdownText, startCountdowns } from './js/ui.js';
+    import { flagUrl } from './js/countries.js';
     import { subscribeAuction, flash } from './js/realtime.js';
 
     const id = new URLSearchParams(location.search).get('id');
@@ -58,20 +60,21 @@
     const submitBtn = document.getElementById('bid-submit');
 
     let auction = null;
+    let bids = [];
     let profile = null;
     let lastPrice = null;
 
-    const isOpen = (a) => a.status === 'active' && new Date(a.end_time) > new Date();
-
-    function bidPanel(a, bids) {
-      const current = Number(a.current_highest_bid) > 0 ? a.current_highest_bid : a.starting_price;
-      const leading = profile && a.highest_bidder_id === profile.profileid;
+    // the box on the right: price, time left and the bid button
+    function bidPanel() {
+      const price = currentPrice(auction, bids);
+      const leaderId = bids.length ? bids[0].bidder_id : auction.highest_bidder_id;
+      const leading = profile && leaderId === profile.id;
       let action;
 
-      if (!isOpen(a)) {
+      if (!isOpen(auction)) {
         action = `<button class="btn btn-block" disabled>Auction closed</button>`;
       } else if (!profile) {
-        action = `<a class="btn btn-primary btn-block" href="login.html?next=${encodeURIComponent('auction.html?id=' + a.id)}">Log in to bid</a>`;
+        action = `<a class="btn btn-primary btn-block" href="login.html?next=${encodeURIComponent('auction.html?id=' + auction.id)}">Log in to bid</a>`;
       } else if (profile.role !== 'bidder') {
         action = `<button class="btn btn-block" disabled>Only bidders can place bids</button>`;
       } else {
@@ -80,9 +83,9 @@
 
       return `
         <aside class="panel">
-          <small class="muted">${Number(a.current_highest_bid) > 0 ? 'Current highest bid' : 'Starting price'}</small>
-          <p class="big-bid">${formatNZD(current)}</p>
-          <p class="countdown" data-end="${esc(a.end_time)}">${timeLeft(a.end_time) === 'Ended' ? 'Ended' : 'Ends in ' + timeLeft(a.end_time)}</p>
+          <small class="muted">${price > 0 ? 'Current highest bid' : 'Starting price'}</small>
+          <p class="big-bid">${formatNZD(price > 0 ? price : auction.starting_price)}</p>
+          <p class="countdown" data-end="${esc(auction.end_time)}">${countdownText(auction.end_time)}</p>
           <p class="bid-note ${leading ? 'lead' : ''}">
             ${leading ? 'You are the highest bidder' : `${bids.length} bid${bids.length === 1 ? '' : 's'} so far`}
           </p>
@@ -90,7 +93,8 @@
         </aside>`;
     }
 
-    function historyTable(bids) {
+    // list of bids. other bidders are shown as a number, not by name
+    function historyTable() {
       if (!bids.length) return '<p class="state">No bids yet. Be the first.</p>';
       return `
         <div class="table-wrap">
@@ -98,7 +102,7 @@
             <thead><tr><th>Bidder</th><th>Amount</th><th>Time</th></tr></thead>
             <tbody>
               ${bids.map((b, i) => {
-                const me = profile && b.bidder_id === profile.profileid;
+                const me = profile && b.bidder_id === profile.id;
                 return `<tr>
                   <td data-label="Bidder" class="${me ? 'history-me' : ''}">${me ? 'You' : 'Bidder #' + (bids.length - i)}</td>
                   <td data-label="Amount">${formatNZD(b.amount)}</td>
@@ -110,45 +114,48 @@
         </div>`;
     }
 
+    // get the auction, its bids and the user, then draw the page
     async function load() {
       if (!id) {
         content.innerHTML = '<p class="state error">No auction selected.</p>';
         return;
       }
       try {
-        const [a, bids, p] = await Promise.all([getAuction(id), getBids(id).catch(() => []), getProfile()]);
-        auction = a;
-        profile = p;
-        document.title = `${a.country_name} | GlobalPass`;
+        [auction, bids, profile] = await Promise.all([getAuction(id), getBids(id), getProfile()]);
+        const status = shownStatus(auction);
+        document.title = `${auction.country_name} | GlobalPass`;
         content.innerHTML = `
           <div class="detail">
             <section class="panel">
+              <img class="detail-img" src="${esc(flagUrl(auction.country_name))}" alt="Flag of ${esc(auction.country_name)}" data-flag>
               <div class="detail-title">
-                <h1>${esc(a.country_name)} citizenship</h1>
-                <span class="badge badge-${esc(a.status)}">${esc(a.status)}</span>
+                <h1>${esc(auction.country_name)} citizenship</h1>
+                <span class="badge badge-${esc(status)}">${esc(status)}</span>
               </div>
               <div class="facts">
-                <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
+                <div><small>Starting price</small><strong>${formatNZD(auction.starting_price)}</strong></div>
                 <div><small>Total bids</small><strong>${bids.length}</strong></div>
-                <div><small>Ends</small><strong>${new Date(a.end_time).toLocaleString('en-NZ')}</strong></div>
-                <div><small>Status</small><strong style="text-transform:capitalize">${esc(a.status)}</strong></div>
+                <div><small>Ends</small><strong>${new Date(auction.end_time).toLocaleString('en-NZ')}</strong></div>
+                <div><small>Status</small><strong style="text-transform:capitalize">${esc(status)}</strong></div>
               </div>
             </section>
-            ${bidPanel(a, bids)}
+            ${bidPanel()}
           </div>
           <div class="section-head" style="margin-top:32px"><h2>Bid history</h2></div>
-          ${historyTable(bids)}`;
+          ${historyTable()}`;
         document.getElementById('open-bid')?.addEventListener('click', openModal);
 
-        const price = Number(a.current_highest_bid);
+        // flash the price when it changed since the last load
+        const price = currentPrice(auction, bids);
         if (lastPrice !== null && price !== lastPrice) flash(document.querySelector('.big-bid'));
         lastPrice = price;
 
+        // if the popup is open and someone else bid, raise the minimum
         if (modal.open) {
-          const min = minNextBid(a);
+          const min = minNextBid(auction, bids);
           document.getElementById('bid-min').textContent = `Minimum bid: ${formatNZD(min)}`;
           amountInput.min = min;
-          if (!isOpen(a)) showBidMsg('This auction has just closed.');
+          if (!isOpen(auction)) showBidMsg('This auction has just closed.');
         }
       } catch (err) {
         console.error(err);
@@ -157,7 +164,7 @@
     }
 
     function openModal() {
-      const min = minNextBid(auction);
+      const min = minNextBid(auction, bids);
       document.getElementById('bid-min').textContent = `Minimum bid: ${formatNZD(min)}`;
       amountInput.min = min;
       amountInput.value = min;
@@ -169,9 +176,10 @@
       amountInput.focus();
     }
 
+    // quick buttons add to the amount
     document.getElementById('quick').addEventListener('click', (e) => {
       const add = e.target.closest('[data-add]')?.dataset.add;
-      if (add) amountInput.value = Math.max(Number(amountInput.value) || 0, minNextBid(auction)) + Number(add);
+      if (add) amountInput.value = Math.max(Number(amountInput.value) || 0, minNextBid(auction, bids)) + Number(add);
     });
 
     document.getElementById('bid-cancel').addEventListener('click', () => modal.close());
@@ -179,15 +187,16 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const amount = Number(amountInput.value);
-      const min = minNextBid(auction);
+      const min = minNextBid(auction, bids);
 
+      // check on the page first, the database checks again when saving
       if (!isOpen(auction)) return showBidMsg('This auction has closed.');
       if (!Number.isFinite(amount) || amount < min) return showBidMsg(`Bid must be at least ${formatNZD(min)}.`);
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Placing bid...';
       try {
-        await placeBid(auction.id, amount);
+        await placeBid(auction.id, profile.id, amount);
         showBidMsg('Bid placed!', true);
         setTimeout(() => modal.close(), 700);
         await load();
@@ -208,8 +217,9 @@
 
     await load();
     startCountdowns();
+    // live updates, plus a slow refresh in case the live connection drops
     if (id) subscribeAuction(id, load);
-    setInterval(load, 60000);
+    setInterval(load, 30000);
   </script>
 </body>
 </html>

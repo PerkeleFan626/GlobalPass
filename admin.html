@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin | GlobalPass</title>
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -24,15 +25,14 @@
     <div class="tabs" role="tablist">
       <button class="tab active" role="tab" data-tab="auctions" aria-selected="true">Auctions</button>
       <button class="tab" role="tab" data-tab="users" aria-selected="false">Users</button>
+      <button class="tab" role="tab" data-tab="archive" aria-selected="false">Archive</button>
     </div>
 
     <p class="form-msg" id="msg" role="alert"></p>
 
-    <!-- Auctions tab -->
+    <!-- auctions tab -->
     <section id="tab-auctions">
-      <div class="section-head">
-        <div class="stats" id="stats" style="flex:1;margin:0"></div>
-      </div>
+      <div class="stats" id="stats"></div>
       <div style="margin-bottom:12px">
         <select id="filter" aria-label="Filter by status" class="select-sm">
           <option value="all">All auctions</option>
@@ -51,28 +51,40 @@
       </div>
     </section>
 
-    <!-- Users tab -->
+    <!-- users tab -->
     <section id="tab-users" hidden>
       <input type="search" id="user-search" class="select-sm" style="width:100%;margin-bottom:12px" placeholder="Search by name or email..." aria-label="Search users">
       <div class="table-wrap">
         <table class="table">
-          <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Role</th></tr></thead>
-          <tbody id="user-rows"><tr><td colspan="4">Loading...</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Joined</th><th>Role</th></tr></thead>
+          <tbody id="user-rows"><tr><td colspan="5">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- archive tab -->
+    <section id="tab-archive" hidden>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Country</th><th>Result</th><th>Starting</th><th>Final price</th><th>Bids</th><th>Archived</th></tr></thead>
+          <tbody id="archive-rows"><tr><td colspan="6">Loading...</td></tr></tbody>
         </table>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
   </footer>
 
   <script type="module">
     import { supabase } from './js/supabase.js';
+    import { getArchive, shownStatus } from './js/api.js';
     import { requireRole } from './js/auth.js';
     import { formatNZD, esc } from './js/ui.js';
     import { subscribeAuctions } from './js/realtime.js';
 
+    // only admins can open this page
     const me = await requireRole(['admin']);
     if (me) init();
 
@@ -91,16 +103,17 @@
         });
         msg.textContent = '';
         if (tab.dataset.tab === 'users') loadUsers();
+        if (tab.dataset.tab === 'archive') loadArchive();
       }));
 
-      // auctions
+      // ---- auctions ----
       const rows = document.getElementById('rows');
       const filter = document.getElementById('filter');
       let auctions = [];
 
       function renderAuctions() {
-        const list = filter.value === 'all' ? auctions : auctions.filter((a) => a.status === filter.value);
-        const count = (s) => auctions.filter((a) => a.status === s).length;
+        const list = filter.value === 'all' ? auctions : auctions.filter((a) => shownStatus(a) === filter.value);
+        const count = (s) => auctions.filter((a) => shownStatus(a) === s).length;
         document.getElementById('stats').innerHTML = `
           <div class="stat"><small>Total</small><strong>${auctions.length}</strong></div>
           <div class="stat"><small>Active</small><strong>${count('active')}</strong></div>
@@ -108,17 +121,20 @@
           <div class="stat"><small>Cancelled</small><strong>${count('cancelled')}</strong></div>`;
 
         rows.innerHTML = list.length
-          ? list.map((a) => `
+          ? list.map((a) => {
+              const status = shownStatus(a);
+              return `
             <tr>
               <td data-label="Country"><a href="auction.html?id=${encodeURIComponent(a.id)}">${esc(a.country_name)}</a></td>
-              <td data-label="Status"><span class="badge badge-${esc(a.status)}">${esc(a.status)}</span></td>
+              <td data-label="Status"><span class="badge badge-${esc(status)}">${esc(status)}</span></td>
               <td data-label="Starting">${formatNZD(a.starting_price)}</td>
               <td data-label="Current bid">${formatNZD(a.current_highest_bid)}</td>
               <td data-label="Ends">${new Date(a.end_time).toLocaleString('en-NZ')}</td>
               <td>${a.status === 'active'
                 ? `<button class="btn btn-danger btn-sm" data-cancel="${esc(a.id)}" data-name="${esc(a.country_name)}">Cancel</button>`
                 : ''}</td>
-            </tr>`).join('')
+            </tr>`;
+            }).join('')
           : '<tr><td colspan="6">No auctions.</td></tr>';
       }
 
@@ -132,7 +148,7 @@
         renderAuctions();
       }
 
-      // click twice to confirm
+      // cancel needs a second click so it is not done by mistake
       rows.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-cancel]');
         if (!btn) return;
@@ -143,15 +159,21 @@
           return;
         }
         btn.disabled = true;
-        const { error } = await supabase.from('auctions').update({ status: 'cancelled' }).eq('id', btn.dataset.cancel);
-        if (error) { show('Could not cancel: ' + error.message); btn.disabled = false; return; }
+        // ask for the changed row back. if nothing comes back the database blocked it
+        const { data, error } = await supabase
+          .from('auctions').update({ status: 'cancelled' }).eq('id', btn.dataset.cancel).select('id');
+        if (error || !data?.length) {
+          show('Could not cancel' + (error ? ': ' + error.message : ' (not allowed).'));
+          btn.disabled = false;
+          return;
+        }
         show(`${btn.dataset.name} auction cancelled.`, true);
         loadAuctions();
       });
 
       filter.addEventListener('change', renderAuctions);
 
-      // users
+      // ---- users ----
       const userRows = document.getElementById('user-rows');
       const userSearch = document.getElementById('user-search');
       let users = [];
@@ -161,14 +183,15 @@
         const list = q ? users.filter((u) => (u.name + ' ' + u.email).toLowerCase().includes(q)) : users;
         userRows.innerHTML = list.length
           ? list.map((u) => {
-              const self = u.profileid === me.profileid;
+              const self = u.id === me.id;
               return `
               <tr>
                 <td data-label="Name">${esc(u.name)}${self ? ' <span class="muted">(you)</span>' : ''}</td>
                 <td data-label="Email">${esc(u.email)}</td>
+                <td data-label="Country">${esc(u.represented_country || '-')}</td>
                 <td data-label="Joined">${new Date(u.created_at).toLocaleDateString('en-NZ')}</td>
                 <td data-label="Role">
-                  <select class="role-select" data-user="${esc(u.profileid)}" data-name="${esc(u.name)}"
+                  <select class="role-select" data-user="${esc(u.id)}" data-name="${esc(u.name)}"
                           aria-label="Role for ${esc(u.name)}" ${self ? 'disabled title="You cannot change your own role"' : ''}>
                     ${['bidder', 'government', 'admin'].map((r) =>
                       `<option value="${r}"${r === u.role ? ' selected' : ''}>${r}</option>`).join('')}
@@ -176,31 +199,32 @@
                 </td>
               </tr>`;
             }).join('')
-          : '<tr><td colspan="4">No users found.</td></tr>';
+          : '<tr><td colspan="5">No users found.</td></tr>';
       }
 
       async function loadUsers() {
         const { data, error } = await supabase
           .from('profiles')
-          .select('profileid, name, email, role, created_at')
+          .select('id, name, email, role, represented_country, created_at')
           .order('created_at', { ascending: false });
-        if (error) { userRows.innerHTML = '<tr><td colspan="4">Could not load users.</td></tr>'; return; }
+        if (error) { userRows.innerHTML = '<tr><td colspan="5">Could not load users.</td></tr>'; return; }
         users = data;
         renderUsers();
       }
 
+      // change a user's role. admins cannot change their own
       userRows.addEventListener('change', async (e) => {
         const sel = e.target.closest('.role-select');
         if (!sel) return;
-        const user = users.find((u) => u.profileid === sel.dataset.user);
+        const user = users.find((u) => u.id === sel.dataset.user);
         const oldRole = user.role;
         sel.disabled = true;
         const { data, error } = await supabase
-          .from('profiles').update({ role: sel.value }).eq('profileid', sel.dataset.user).select();
+          .from('profiles').update({ role: sel.value }).eq('id', sel.dataset.user).select('id');
         sel.disabled = false;
         if (error || !data?.length) {
           sel.value = oldRole;
-          show(`Could not change ${sel.dataset.name}'s role${error ? ': ' + error.message : ' (permission denied).'}`);
+          show(`Could not change ${sel.dataset.name}'s role${error ? ': ' + error.message : ' (not allowed).'}`);
           return;
         }
         user.role = sel.value;
@@ -208,6 +232,24 @@
       });
 
       userSearch.addEventListener('input', renderUsers);
+
+      // ---- archive (ended and cancelled auctions, from the backend function) ----
+      const archiveRows = document.getElementById('archive-rows');
+
+      async function loadArchive() {
+        const list = await getArchive();
+        archiveRows.innerHTML = list.length
+          ? list.map((a) => `
+            <tr>
+              <td data-label="Country">${esc(a.country_name)}</td>
+              <td data-label="Result"><span class="badge badge-${esc(a.final_status)}">${esc(a.final_status)}</span></td>
+              <td data-label="Starting">${formatNZD(a.starting_price)}</td>
+              <td data-label="Final price">${formatNZD(a.final_price)}</td>
+              <td data-label="Bids">${esc(a.total_bids)}</td>
+              <td data-label="Archived">${new Date(a.archived_at).toLocaleString('en-NZ')}</td>
+            </tr>`).join('')
+          : '<tr><td colspan="6">Nothing in the archive yet.</td></tr>';
+      }
 
       loadAuctions();
       subscribeAuctions(loadAuctions);
