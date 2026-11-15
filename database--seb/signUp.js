@@ -29,7 +29,7 @@ export async function signUpUser({ email, password, name, represented_country, r
     options: {
       data: {
         name: name.trim(),
-        represented_country: country,
+        represented_country: cleanCountry,
         role: role
       }
     }
