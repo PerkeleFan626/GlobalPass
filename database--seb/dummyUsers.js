@@ -1,50 +1,67 @@
 import { supabase } from './database.js';
+import { validateCountry } from './countryValidator.js';
 
 let activeDummyUser = null;
 
-export function setActiveDummyUser(profile) {
-  activeDummyUser = profile;
-}
+export async function createDummyUser({ name, email, role = 'bidder', represented_country = null }) {
+  if (!name || !email) {
+    const errorMsg = 'Name and email are required to create a dummy user.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
 
-export function getActiveDummyUser() {
-  return activeDummyUser;
-}
+  let validatedCountry = null;
 
-export async function createDummyUser({ name, email, role, country }) {
-  const countryF = role === 'government' && country
-    ? country.trim()
-    : null;
-
-  if (role === 'government' && !countryF) {
-    console.error('Government dummy users require a represented country.');
-    return null;
+  if (role === 'government') {
+    const countryResult = validateCountry(represented_country);
+    if (!countryResult.success) {
+      return countryResult;
+    }
+    validatedCountry = countryResult.country;
   }
 
   const { data, error } = await supabase.rpc('create_dummy_user', {
     dummy_name: name.trim(),
     dummy_email: email.trim(),
     dummy_role: role,
-    dummy_country: countryF
+    dummy_country: validatedCountry
   });
 
   if (error) {
     console.error('Failed to create dummy user:', error.message);
-    return null;
+    return { success: false, error: error.message };
   }
 
-  return Array.isArray(data) ? data[0] : data;
+  activeDummyUser = data;
+  return { success: true, user: data };
 }
 
-export async function getTestProfiles() {
+export async function switchDummyUser(userId) {
+  if (!userId) {
+    const errorMsg = 'A user ID is required to switch dummy users.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .order('created_at', { ascending: false });
+    .eq('id', userId)
+    .single();
 
   if (error) {
-    console.error('Error fetching profiles:', error.message);
-    return [];
+    console.error('Failed to switch dummy user:', error.message);
+    return { success: false, error: error.message };
   }
 
-  return data;
+  activeDummyUser = data;
+  return { success: true, user: data };
+}
+
+export function getActiveDummyUser() {
+  return activeDummyUser;
+}
+
+export function clearActiveDummyUser() {
+  activeDummyUser = null;
 }
