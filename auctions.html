@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Auctions | GlobalPass</title>
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,6 +24,7 @@
       <select id="status" aria-label="Filter by status">
         <option value="active">Active</option>
         <option value="ended">Ended</option>
+        <option value="cancelled">Cancelled</option>
         <option value="all">All</option>
       </select>
       <select id="sort" aria-label="Sort auctions">
@@ -39,7 +41,7 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S</div>
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
   </footer>
 
   <script type="module">
@@ -53,6 +55,7 @@
     const status = document.getElementById('status');
     const sort = document.getElementById('sort');
 
+    // load the list again every time a filter changes
     async function load() {
       try {
         const auctions = await getAuctions({
@@ -69,6 +72,7 @@
       }
     }
 
+    // wait until the user stops typing before searching
     let timer;
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 300); });
     status.addEventListener('change', load);
