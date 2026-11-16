@@ -1,4 +1,5 @@
 import { supabase } from './database.js';
+import { validateCountry } from './countryValidator.js';
 
 export async function signUpUser({ email, password, name, represented_country, role = 'bidder' }) {
   if (!email || !password || !name) {
@@ -13,14 +14,16 @@ export async function signUpUser({ email, password, name, represented_country, r
     return { success: false, error: errorMsg };
   }
 
-  const country = role === 'government' && represented_country
-    ? represented_country.trim()
-    : null;
+  let validatedCountry = null;
 
-  if (role === 'government' && !country) {
-    const errorMsg = 'Government accounts must specify a represented country.';
-    console.error(errorMsg);
-    return { success: false, error: errorMsg };
+  if (role === 'government') {
+    const countryResult = validateCountry(represented_country);
+    if (!countryResult.success) {
+      const errorMsg = countryResult.error;
+      console.error(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+    validatedCountry = countryResult.country;
   }
 
   const { data, error } = await supabase.auth.signUp({
@@ -29,7 +32,7 @@ export async function signUpUser({ email, password, name, represented_country, r
     options: {
       data: {
         name: name.trim(),
-        represented_country: cleanCountry,
+        represented_country: validatedCountry,
         role: role
       }
     }
