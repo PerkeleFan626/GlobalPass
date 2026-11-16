@@ -27,11 +27,12 @@ export async function getActiveAuctions(limit = null) {
     .from('auctions')
     .select(AUCTION_FIELDS)
     .eq('status', 'active')
-    .gt('end_time', new Date().toISOString())
+ 
     .order('end_time', { ascending: true });
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw error;
+  window.pigg = data;
   return data;
 }
 

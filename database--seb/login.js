@@ -1,5 +1,5 @@
 import { supabase } from './database.js';
-import { setActiveDummyUser } from './dummyUsers.js';
+import { setActiveDummyUser } from './users.js';
 
 export async function loginUser({email, password}) {
     if (!email || !password) {
