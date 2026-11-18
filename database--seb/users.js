@@ -23,7 +23,10 @@ export async function getCurrentUser() {
 
   const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (error || !user) {
+if (error || !user) {
+    if (error) {
+      await supabase.auth.signOut({ scope: 'local' });
+    }
     return null;
   }
 

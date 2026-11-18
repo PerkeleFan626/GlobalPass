@@ -43,5 +43,11 @@ export async function signUpUser({ email, password, name, represented_country, r
     return { success: false, error: error.message };
   }
 
+  if (data.user && data.user.identities && data.user.identities.length === 0) {
+    const errorMsg = 'An account with this email already exists.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
   return { success: true, user: data.user, session: data.session };
 }
