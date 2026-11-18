@@ -1,0 +1,191 @@
+PROBLEMS FOUND IN THE BACKEND (for Sebastian)
+=============================================
+
+Checked on 19 November 2026 against:
+- the JS files in database--seb (latest commit 4b3ce14)
+- the Supabase SQL export (functions, triggers, policies, tables)
+
+Nothing in database--seb or in Supabase was changed. These are only notes.
+Each problem says where it is, what goes wrong, and an idea to fix it.
+Most important first.
+
+
+-------------------------------------------------------------
+A. WHY THE GOVERNMENT USER COULD NOT CREATE AN AUCTION
+-------------------------------------------------------------
+
+1. Row Level Security is ON for all 4 tables, but there are 0 policies
+   Where: Supabase, tables profiles, auctions, bids, auctions_archive
+   What goes wrong: with RLS on and no policies, the database blocks
+   every read and every write for everyone using the website.
+   - createAuction() gets "new row violates row-level security policy"
+   - the homepage, catalog and admin pages get 0 rows
+   - getCurrentUser() cannot read the profile, so a logged in user
+     looks like they have no role, so the Create auction button and
+     page are hidden
+   Idea: add policies, for example
+   - auctions: everyone can select, government can insert their own
+     (created_by = auth.uid()), admin can update
+   - bids: everyone can select, a bidder can insert their own
+     (bidder_id = auth.uid())
+   - profiles: a user can select their own row, admin can select and
+     update all
+   - auctions_archive: admin can select
+
+2. Dummy users only live in the page's memory
+   Where: users.js (activeDummyUser), dummyUsers.js (activeDummyUser)
+   What goes wrong: the dummy user is a normal variable. When the
+   page reloads or you click to another page, it is gone and you are
+   logged out again. So if the demo used a dummy user, the next page
+   (create-auction.html) saw nobody logged in and sent you to log in.
+   Idea: save the dummy user id in localStorage and read it back in
+   getCurrentUser(), or use real logins for the demo.
+
+3. The function create_dummy_user does not exist in Supabase
+   Where: users.js line 70 and dummyUsers.js line 23 call
+   supabase.rpc('create_dummy_user', ...)
+   What goes wrong: it is not in the SQL export, so createDummyUser()
+   always fails with "could not find the function".
+   Idea: create the SQL function, or remove the two JS functions.
+
+
+-------------------------------------------------------------
+B. SQL FUNCTIONS THAT ARE NOT CONNECTED TO ANYTHING
+-------------------------------------------------------------
+
+4. No triggers on any public table
+   Where: Supabase. The only trigger is on_auth_user_created on
+   auth.users.
+   What goes wrong: these trigger functions exist but never run:
+   - validate_bid: bids are not checked (closed auction, too low)
+   - process_bid: auctions.current_highest_bid and highest_bidder_id
+     are never updated when someone bids
+   - auction_ended_trigger / archive_auction(): ended or cancelled
+     auctions are never archived
+   Idea: create the triggers again, for example
+   - before insert on bids -> validate_bid()
+   - after insert on bids -> process_bid()
+   - after update of status on auctions -> auction_ended_trigger()
+
+5. The old archive_auction() trigger function uses the old column name
+   Where: archive_auction() (the version with no inputs)
+   What goes wrong: it uses "where acution_id = NEW.id". That column
+   is now auction_id, so it errors if it is ever used. It also does
+   not fill the bids column, which is NOT NULL in auctions_archive.
+   Idea: delete this version and keep archive_auction(p_auction_id),
+   which auction_ended_trigger already uses.
+
+6. Cancelled auctions are saved as "ended" in the archive
+   Where: archive_auction(p_auction_id) always writes final_status
+   'ended'
+   What goes wrong: an admin cancels an auction, but the archive says
+   it ended normally.
+   Idea: pass the new status in, for example
+   archive_auction(NEW.id, NEW.status).
+
+7. expire_overdue_auctions() is never called
+   Where: Supabase function expire_overdue_auctions()
+   What goes wrong: auctions past their end time stay 'active' in the
+   database. The website shows them as "Ended" by checking the time,
+   but the database still says active. (If pg_cron calls it, it was
+   not in the export.)
+   Idea: run it on a schedule with pg_cron, for example every minute.
+
+8. validate_bid and delete_auction are not SECURITY DEFINER
+   Where: validate_bid(), delete_auction()
+   What goes wrong: once RLS policies exist, validate_bid uses
+   "select ... for update" on auctions. A bidder is not allowed to
+   update auctions, so it can fail with "Auction does not exist".
+   delete_auction will also be blocked for normal users.
+   Idea: add SECURITY DEFINER and SET search_path = public to both.
+
+
+-------------------------------------------------------------
+C. SECURITY
+-------------------------------------------------------------
+
+9. Anyone can sign up as admin
+   Where: handle_new_user() takes the role from
+   raw_user_meta_data ->> 'role', which comes from the browser
+   (signUp.js sends role in options.data)
+   What goes wrong: the sign up page only offers bidder and
+   government, but anyone can call supabase.auth.signUp from the
+   browser console with role 'admin' and become admin. A role that is
+   not bidder, government or admin makes sign up fail with a database
+   error.
+   Idea: in handle_new_user, only accept 'bidder' or 'government' and
+   use 'bidder' for anything else.
+
+
+-------------------------------------------------------------
+D. JS FUNCTIONS IN database--seb
+-------------------------------------------------------------
+
+10. getAuctionById() does not return end_time
+    Where: read_auction.js, getAuctionById()
+    What goes wrong: the auction page needs end_time for the countdown
+    and to know if bidding is open. Because of this, the auction page
+    still uses the frontend function getAuction() in js/api.js.
+    Idea: add end_time to the select. Then the page can use yours.
+
+11. Two functions called getActiveAuctions()
+    Where: auctions.js and read_auction.js
+    What goes wrong: same name, different results. read_auction.js
+    has no end_time, auctions.js has flags and the government. The
+    homepage uses the one in auctions.js.
+    Idea: keep one, or rename the other.
+
+12. Two functions called createDummyUser() and two activeDummyUser
+    Where: users.js and dummyUsers.js
+    What goes wrong: they take different inputs (country vs
+    represented_country). switchDummyUser() in dummyUsers.js changes
+    its own activeDummyUser, but getCurrentUser() in users.js reads a
+    different one, so switching does not change who is logged in.
+    Idea: keep the dummy user code in one file.
+
+13. getActiveAuctionById() reads the archive table
+    Where: archive.js
+    What goes wrong: the name says active, but it reads
+    auctions_archive. It uses .or(...).single(), which errors if two
+    rows match.
+    Idea: rename it to getArchivedAuctionById().
+
+14. createAuction() crashes on a bad date
+    Where: auctions.js, new Date(end_time).toISOString()
+    What goes wrong: an invalid date throws an error instead of
+    returning { success: false }. It also does not check that the end
+    time is in the future. (The create auction page checks both
+    before calling it, so the website is fine.)
+    Idea: check isNaN(new Date(end_time)) and that it is after now.
+
+15. Country names are saved in small letters
+    Where: validateCountry() and country_trim() return lower case
+    What goes wrong: auctions are saved as "new zealand". The pages
+    add capital letters when they show them, so this is only a note.
+
+16. testConnection() runs on every page
+    Where: database.js
+    What goes wrong: every page makes one extra database request and
+    writes to the console. Fine for testing, but remove it before
+    handing in.
+
+
+-------------------------------------------------------------
+E. THINGS THE FRONTEND STILL DOES ITSELF (no backend function yet)
+-------------------------------------------------------------
+
+The pages use your functions wherever one exists. For these there is
+no function in database--seb, so js/api.js and the pages still do
+them. If you add functions for them, tell Ayush and the pages will
+switch to yours.
+
+- placeBid()             insert into bids        (js/api.js)
+- getAuctions()          catalog search, filter, sort (js/api.js)
+- getAuction()           one auction with end_time (see problem 10)
+- getMyAuctions()        a government user's own auctions (js/api.js)
+- cancel an auction      update auctions.status  (admin.html)
+- change a user's role   update profiles.role    (admin.html)
+
+Also: commit 2f684cb added "window.pigg = data;" to js/api.js. The
+homepage now uses your getActiveAuctions() from auctions.js, so that
+line is gone.

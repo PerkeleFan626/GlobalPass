@@ -17,7 +17,13 @@
   </header>
 
   <main class="container section">
-    <div class="section-head"><h2>Auction catalog</h2><span class="live-badge" id="live-badge">○ Connecting...</span></div>
+    <div class="section-head">
+      <h2>Auction catalog</h2>
+      <span class="head-right">
+        <span class="live-badge" id="live-badge">○ Connecting...</span>
+        <a href="create-auction.html" class="btn btn-primary btn-sm" data-show-role="government" hidden>+ Create auction</a>
+      </span>
+    </div>
 
     <form class="toolbar" id="filters" role="search">
       <input type="search" id="search" placeholder="Search by country..." aria-label="Search by country">

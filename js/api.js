@@ -1,9 +1,10 @@
 // data functions used by the pages
 // reads go through the shared supabase client
-// creating auctions, reading bids and the archive use the backend functions
+// when the backend folder (database--seb) has a function for something, we use it
 import { supabase } from './supabase.js';
 import { getAuctionBids } from '../database--seb/read_auction.js';
-import { createAuction as backendCreateAuction } from '../database--seb/auctions.js';
+import { createAuction as backendCreateAuction, getActiveAuctions as backendGetActiveAuctions } from '../database--seb/auctions.js';
+import { getTestProfiles } from '../database--seb/users.js';
 import { getArchivedAuctions } from '../database--seb/archive.js';
 
 const AUCTION_FIELDS = 'id, country_name, starting_price, current_highest_bid, highest_bidder_id, end_time, status, created_by, created_at';
@@ -21,19 +22,12 @@ export function shownStatus(auction) {
   return auction.status;
 }
 
-// open auctions, ending soonest first (homepage)
+// active auctions for the homepage (backend function)
+// open ones first, the one ending soonest at the top
 export async function getActiveAuctions(limit = null) {
-  let query = supabase
-    .from('auctions')
-    .select(AUCTION_FIELDS)
-    .eq('status', 'active')
- 
-    .order('end_time', { ascending: true });
-  if (limit) query = query.limit(limit);
-  const { data, error } = await query;
-  if (error) throw error;
-  window.pigg = data;
-  return data;
+  const auctions = await backendGetActiveAuctions();
+  auctions.sort((x, y) => (isOpen(y) - isOpen(x)) || (new Date(x.end_time) - new Date(y.end_time)));
+  return limit ? auctions.slice(0, limit) : auctions;
 }
 
 // auctions for the catalog page (search, filter, sort)
@@ -113,4 +107,9 @@ export async function createAuction({ country_name, starting_price, end_time }) 
 // ended and cancelled auctions (backend function)
 export async function getArchive() {
   return getArchivedAuctions();
+}
+
+// every user, A to Z by name (backend function, used on the admin page)
+export async function getUsers() {
+  return getTestProfiles();
 }

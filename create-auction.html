@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My listings | GlobalPass</title>
+  <title>Create auction | GlobalPass</title>
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -17,18 +17,28 @@
   </header>
 
   <main class="container section" id="page" hidden>
-    <form class="form-card" id="auction-form" novalidate>
-      <h1>List a citizenship auction</h1>
-      <p class="form-sub">Bidding opens right away and closes at the end time.</p>
+    <form class="form-card create-card" id="auction-form" novalidate>
+      <h1>Create an auction</h1>
+      <p class="form-sub">Bidding opens as soon as you create it and closes at the end time.</p>
 
       <label for="country">Country</label>
-      <input id="country" name="country" type="text" maxlength="80" required>
+      <div class="country-row">
+        <img class="flag-preview" id="flag-preview" src="images/placeholder.svg" alt="" data-flag>
+        <input id="country" name="country" type="text" maxlength="80" autocomplete="off" list="country-list" placeholder="Start typing, then pick from the list" required>
+      </div>
+      <datalist id="country-list"></datalist>
+      <p class="field-msg" id="country-msg"></p>
 
       <label for="price">Starting price (NZD)</label>
-      <input id="price" name="price" type="number" min="1" step="1" inputmode="numeric" required>
+      <input id="price" name="price" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 50000" required>
 
       <label for="end">Auction ends</label>
       <input id="end" name="end" type="datetime-local" required>
+      <div class="quick" id="quick-end">
+        <button type="button" class="btn btn-ghost" data-days="1">1 day</button>
+        <button type="button" class="btn btn-ghost" data-days="3">3 days</button>
+        <button type="button" class="btn btn-ghost" data-days="7">1 week</button>
+      </div>
 
       <p class="form-msg" id="msg" role="alert"></p>
       <button type="submit" class="btn btn-primary btn-block" id="submit">Create auction</button>
@@ -46,6 +56,7 @@
     import { createAuction, getMyAuctions } from './js/api.js';
     import { requireRole } from './js/auth.js';
     import { auctionCard, startCountdowns } from './js/ui.js';
+    import { flagUrl, countryLabel, checkCountry, fillCountryList, PLACEHOLDER_IMAGE } from './js/countries.js';
 
     // only government users can open this page
     const profile = await requireRole(['government']);
@@ -57,14 +68,50 @@
       const msg = document.getElementById('msg');
       const btn = document.getElementById('submit');
       const end = document.getElementById('end');
+      const country = document.getElementById('country');
+      const countryMsg = document.getElementById('country-msg');
+      const flag = document.getElementById('flag-preview');
 
-      // start with the country this account represents
-      form.country.value = profile.represented_country || '';
+      fillCountryList('country-list');
+
+      // the date box wants local time written as yyyy-mm-ddThh:mm
+      const pad = (n) => String(n).padStart(2, '0');
+      const toLocalInput = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       // the end time has to be at least 5 minutes from now
-      const pad = (n) => String(n).padStart(2, '0');
-      const soon = new Date(Date.now() + 5 * 60 * 1000);
-      end.min = `${soon.getFullYear()}-${pad(soon.getMonth() + 1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`;
+      end.min = toLocalInput(new Date(Date.now() + 5 * 60 * 1000));
+
+      // quick buttons set the end time to 1 day, 3 days or 1 week from now
+      document.getElementById('quick-end').addEventListener('click', (e) => {
+        const days = e.target.closest('[data-days]')?.dataset.days;
+        if (days) end.value = toLocalInput(new Date(Date.now() + days * 86400000));
+      });
+
+      // check the country while typing and show its flag (backend check and flags)
+      function updateCountry() {
+        const value = country.value.trim();
+        if (!value) {
+          flag.src = PLACEHOLDER_IMAGE;
+          countryMsg.textContent = '';
+          countryMsg.className = 'field-msg';
+          return false;
+        }
+        const check = checkCountry(value);
+        flag.src = check.success ? flagUrl(check.country) : PLACEHOLDER_IMAGE;
+        flag.alt = check.success ? `Flag of ${countryLabel(check.country)}` : '';
+        countryMsg.textContent = check.success ? '' : 'Pick a country from the list.';
+        countryMsg.className = 'field-msg' + (check.success ? '' : ' error');
+        return check.success;
+      }
+      country.addEventListener('input', updateCountry);
+
+      // start with the country this account represents
+      function resetForm() {
+        form.reset();
+        country.value = profile.represented_country ? countryLabel(profile.represented_country) : '';
+        updateCountry();
+      }
 
       function show(text, ok = false) {
         msg.textContent = text;
@@ -77,7 +124,7 @@
           const auctions = await getMyAuctions(profile.id);
           box.innerHTML = auctions.length
             ? auctions.map(auctionCard).join('')
-            : '<p class="state">You have no listings yet.</p>';
+            : '<p class="state">You have no listings yet. Create your first one above.</p>';
         } catch (err) {
           console.error(err);
           box.innerHTML = '<p class="state error">Could not load your listings.</p>';
@@ -86,19 +133,21 @@
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const country = form.country.value.trim();
         const price = Number(form.price.value);
         const endTime = new Date(form.end.value);
 
-        if (!country) return show('Enter a country.');
+        // check on the page first, then the backend checks again
+        if (!updateCountry()) return show('Pick a country from the list.');
         if (!price || price < 1) return show('Starting price must be at least $1.');
-        if (isNaN(endTime) || endTime <= new Date()) return show('End time must be in the future.');
+        if (!form.end.value || isNaN(endTime)) return show('Choose when the auction ends.');
+        if (endTime <= new Date()) return show('End time must be in the future.');
 
         btn.disabled = true;
         btn.textContent = 'Creating...';
 
+        // backend function: checks the role, the country and the price, then saves it
         const result = await createAuction({
-          country_name: country,
+          country_name: country.value.trim(),
           starting_price: price,
           end_time: endTime.toISOString(),
         });
@@ -107,12 +156,15 @@
         btn.textContent = 'Create auction';
 
         if (!result.success) return show('Could not create auction: ' + (result.error || 'please try again.'));
-        show('Auction created!', true);
-        form.reset();
-        form.country.value = profile.represented_country || '';
+
+        const id = result.auction?.id;
+        msg.innerHTML = `Auction created!${id ? ` <a href="auction.html?id=${encodeURIComponent(id)}">View it</a>` : ''}`;
+        msg.className = 'form-msg ok';
+        resetForm();
         loadMine();
       });
 
+      resetForm();
       loadMine();
       startCountdowns();
     }

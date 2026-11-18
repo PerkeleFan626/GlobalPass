@@ -56,8 +56,8 @@
       <input type="search" id="user-search" class="select-sm" style="width:100%;margin-bottom:12px" placeholder="Search by name or email..." aria-label="Search users">
       <div class="table-wrap">
         <table class="table">
-          <thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Joined</th><th>Role</th></tr></thead>
-          <tbody id="user-rows"><tr><td colspan="5">Loading...</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Role</th></tr></thead>
+          <tbody id="user-rows"><tr><td colspan="4">Loading...</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -79,7 +79,8 @@
 
   <script type="module">
     import { supabase } from './js/supabase.js';
-    import { getArchive, shownStatus } from './js/api.js';
+    import { getArchive, getUsers, shownStatus } from './js/api.js';
+    import { countryLabel } from './js/countries.js';
     import { requireRole } from './js/auth.js';
     import { formatNZD, esc } from './js/ui.js';
     import { subscribeAuctions } from './js/realtime.js';
@@ -125,13 +126,13 @@
               const status = shownStatus(a);
               return `
             <tr>
-              <td data-label="Country"><a href="auction.html?id=${encodeURIComponent(a.id)}">${esc(a.country_name)}</a></td>
+              <td data-label="Country"><a href="auction.html?id=${encodeURIComponent(a.id)}">${esc(countryLabel(a.country_name))}</a></td>
               <td data-label="Status"><span class="badge badge-${esc(status)}">${esc(status)}</span></td>
               <td data-label="Starting">${formatNZD(a.starting_price)}</td>
               <td data-label="Current bid">${formatNZD(a.current_highest_bid)}</td>
               <td data-label="Ends">${new Date(a.end_time).toLocaleString('en-NZ')}</td>
               <td>${a.status === 'active'
-                ? `<button class="btn btn-danger btn-sm" data-cancel="${esc(a.id)}" data-name="${esc(a.country_name)}">Cancel</button>`
+                ? `<button class="btn btn-danger btn-sm" data-cancel="${esc(a.id)}" data-name="${esc(countryLabel(a.country_name))}">Cancel</button>`
                 : ''}</td>
             </tr>`;
             }).join('')
@@ -188,8 +189,7 @@
               <tr>
                 <td data-label="Name">${esc(u.name)}${self ? ' <span class="muted">(you)</span>' : ''}</td>
                 <td data-label="Email">${esc(u.email)}</td>
-                <td data-label="Country">${esc(u.represented_country || '-')}</td>
-                <td data-label="Joined">${new Date(u.created_at).toLocaleDateString('en-NZ')}</td>
+                <td data-label="Country">${esc(u.represented_country ? countryLabel(u.represented_country) : '-')}</td>
                 <td data-label="Role">
                   <select class="role-select" data-user="${esc(u.id)}" data-name="${esc(u.name)}"
                           aria-label="Role for ${esc(u.name)}" ${self ? 'disabled title="You cannot change your own role"' : ''}>
@@ -199,16 +199,11 @@
                 </td>
               </tr>`;
             }).join('')
-          : '<tr><td colspan="5">No users found.</td></tr>';
+          : '<tr><td colspan="4">No users found.</td></tr>';
       }
 
       async function loadUsers() {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, name, email, role, represented_country, created_at')
-          .order('created_at', { ascending: false });
-        if (error) { userRows.innerHTML = '<tr><td colspan="5">Could not load users.</td></tr>'; return; }
-        users = data;
+        users = await getUsers();
         renderUsers();
       }
 
@@ -241,7 +236,7 @@
         archiveRows.innerHTML = list.length
           ? list.map((a) => `
             <tr>
-              <td data-label="Country">${esc(a.country_name)}</td>
+              <td data-label="Country">${esc(countryLabel(a.country_name))}</td>
               <td data-label="Result"><span class="badge badge-${esc(a.final_status)}">${esc(a.final_status)}</span></td>
               <td data-label="Starting">${formatNZD(a.starting_price)}</td>
               <td data-label="Final price">${formatNZD(a.final_price)}</td>
