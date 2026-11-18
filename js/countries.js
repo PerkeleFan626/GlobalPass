@@ -1,67 +1,41 @@
-// country name to flag picture
-// the flags come from flagcdn.com, the code is the 2 letter country code
+// country helpers for the pages
+// the country list, the check and the flag pictures all come from the
+// backend folder (database--seb), so the pages and the backend agree
+import { UN_COUNTRIES } from '../database--seb/unCountries.js';
+import { validateCountry } from '../database--seb/countryValidator.js';
+import { getFlagUrl } from '../database--seb/flagStorage.js';
 
-const COUNTRY_CODES = {
-  'afghanistan': 'af', 'albania': 'al', 'algeria': 'dz', 'andorra': 'ad',
-  'angola': 'ao', 'antigua and barbuda': 'ag', 'argentina': 'ar', 'armenia': 'am',
-  'australia': 'au', 'austria': 'at', 'azerbaijan': 'az', 'bahamas': 'bs',
-  'bahrain': 'bh', 'bangladesh': 'bd', 'barbados': 'bb', 'belarus': 'by',
-  'belgium': 'be', 'belize': 'bz', 'benin': 'bj', 'bhutan': 'bt',
-  'bolivia': 'bo', 'bosnia and herzegovina': 'ba', 'botswana': 'bw', 'brazil': 'br',
-  'brunei': 'bn', 'bulgaria': 'bg', 'burkina faso': 'bf', 'burundi': 'bi',
-  'cambodia': 'kh', 'cameroon': 'cm', 'canada': 'ca', 'cape verde': 'cv',
-  'central african republic': 'cf', 'chad': 'td', 'chile': 'cl', 'china': 'cn',
-  'colombia': 'co', 'comoros': 'km', 'congo': 'cg', 'costa rica': 'cr',
-  'croatia': 'hr', 'cuba': 'cu', 'cyprus': 'cy', 'czech republic': 'cz',
-  'czechia': 'cz', 'denmark': 'dk', 'djibouti': 'dj', 'dominica': 'dm',
-  'dominican republic': 'do', 'dr congo': 'cd', 'ecuador': 'ec', 'egypt': 'eg',
-  'el salvador': 'sv', 'equatorial guinea': 'gq', 'eritrea': 'er', 'estonia': 'ee',
-  'eswatini': 'sz', 'ethiopia': 'et', 'fiji': 'fj', 'finland': 'fi',
-  'france': 'fr', 'gabon': 'ga', 'gambia': 'gm', 'georgia': 'ge',
-  'germany': 'de', 'ghana': 'gh', 'greece': 'gr', 'grenada': 'gd',
-  'guatemala': 'gt', 'guinea': 'gn', 'guinea-bissau': 'gw', 'guyana': 'gy',
-  'haiti': 'ht', 'honduras': 'hn', 'hungary': 'hu', 'iceland': 'is',
-  'india': 'in', 'indonesia': 'id', 'iran': 'ir', 'iraq': 'iq',
-  'ireland': 'ie', 'israel': 'il', 'italy': 'it', 'ivory coast': 'ci',
-  'jamaica': 'jm', 'japan': 'jp', 'jordan': 'jo', 'kazakhstan': 'kz',
-  'kenya': 'ke', 'kiribati': 'ki', 'kosovo': 'xk', 'kuwait': 'kw',
-  'kyrgyzstan': 'kg', 'laos': 'la', 'latvia': 'lv', 'lebanon': 'lb',
-  'lesotho': 'ls', 'liberia': 'lr', 'libya': 'ly', 'liechtenstein': 'li',
-  'lithuania': 'lt', 'luxembourg': 'lu', 'madagascar': 'mg', 'malawi': 'mw',
-  'malaysia': 'my', 'maldives': 'mv', 'mali': 'ml', 'malta': 'mt',
-  'marshall islands': 'mh', 'mauritania': 'mr', 'mauritius': 'mu', 'mexico': 'mx',
-  'micronesia': 'fm', 'moldova': 'md', 'monaco': 'mc', 'mongolia': 'mn',
-  'montenegro': 'me', 'morocco': 'ma', 'mozambique': 'mz', 'myanmar': 'mm',
-  'namibia': 'na', 'nauru': 'nr', 'nepal': 'np', 'netherlands': 'nl',
-  'new zealand': 'nz', 'nicaragua': 'ni', 'niger': 'ne', 'nigeria': 'ng',
-  'north korea': 'kp', 'north macedonia': 'mk', 'norway': 'no', 'oman': 'om',
-  'pakistan': 'pk', 'palau': 'pw', 'palestine': 'ps', 'panama': 'pa',
-  'papua new guinea': 'pg', 'paraguay': 'py', 'peru': 'pe', 'philippines': 'ph',
-  'poland': 'pl', 'portugal': 'pt', 'qatar': 'qa', 'romania': 'ro',
-  'russia': 'ru', 'rwanda': 'rw', 'saint kitts and nevis': 'kn', 'saint lucia': 'lc',
-  'saint vincent and the grenadines': 'vc', 'samoa': 'ws', 'san marino': 'sm', 'sao tome and principe': 'st',
-  'saudi arabia': 'sa', 'senegal': 'sn', 'serbia': 'rs', 'seychelles': 'sc',
-  'sierra leone': 'sl', 'singapore': 'sg', 'slovakia': 'sk', 'slovenia': 'si',
-  'solomon islands': 'sb', 'somalia': 'so', 'south africa': 'za', 'south korea': 'kr',
-  'south sudan': 'ss', 'spain': 'es', 'sri lanka': 'lk', 'sudan': 'sd',
-  'suriname': 'sr', 'sweden': 'se', 'switzerland': 'ch', 'syria': 'sy',
-  'taiwan': 'tw', 'tajikistan': 'tj', 'tanzania': 'tz', 'thailand': 'th',
-  'timor-leste': 'tl', 'togo': 'tg', 'tonga': 'to', 'trinidad and tobago': 'tt',
-  'tunisia': 'tn', 'turkey': 'tr', 'turkmenistan': 'tm', 'tuvalu': 'tv',
-  'uganda': 'ug', 'ukraine': 'ua', 'united arab emirates': 'ae', 'uae': 'ae',
-  'united kingdom': 'gb', 'uk': 'gb', 'united states': 'us', 'united states of america': 'us',
-  'usa': 'us', 'uruguay': 'uy', 'uzbekistan': 'uz', 'vanuatu': 'vu',
-  'vatican city': 'va', 'venezuela': 've', 'vietnam': 'vn', 'yemen': 'ye',
-  'zambia': 'zm', 'zimbabwe': 'zw',
-};
-
-// picture shown when we do not know the country or the flag does not load
+// picture shown when there is no flag for the country, or it does not load
 export const PLACEHOLDER_IMAGE = 'images/placeholder.svg';
 
-// flag picture for a country name, or the placeholder
+// flag picture for a country name (from Supabase storage), or the placeholder
 export function flagUrl(countryName) {
-  const code = COUNTRY_CODES[String(countryName || '').trim().toLowerCase()];
-  return code ? `https://flagcdn.com/w640/${code}.png` : PLACEHOLDER_IMAGE;
+  return getFlagUrl(countryName) || PLACEHOLDER_IMAGE;
+}
+
+// the backend saves country names in small letters ("new zealand"),
+// so we show them with capital letters ("New Zealand")
+export function countryLabel(countryName) {
+  return String(countryName || '')
+    .trim()
+    .split(' ')
+    .map((word) => (word === 'and' || word === 'the' || word === 'of' ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ');
+}
+
+// every UN country name with capital letters, A to Z (for the country list in forms)
+export const COUNTRY_NAMES = Object.keys(UN_COUNTRIES).map(countryLabel).sort();
+
+// check a country name with the backend check. returns { success, country, error }
+export function checkCountry(countryName) {
+  return validateCountry(countryName);
+}
+
+// fill a <datalist> with every country so the user can pick one while typing
+export function fillCountryList(datalistId) {
+  const list = document.getElementById(datalistId);
+  if (!list) return;
+  list.innerHTML = COUNTRY_NAMES.map((name) => `<option value="${name}"></option>`).join('');
 }
 
 // if a flag picture fails to load, swap it for the placeholder

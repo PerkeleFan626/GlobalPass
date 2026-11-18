@@ -15,6 +15,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* anything marked hidden stays hidden, even buttons */
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--text); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
@@ -259,3 +261,13 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.6); }
 
 /* keep the side space on phones for blocks that are also a section or the hero */
 .container { padding-left: 16px; padding-right: 16px; }
+
+/* create auction page */
+.country-row { display: flex; gap: 10px; align-items: center; }
+.country-row input { flex: 1; min-width: 0; }
+.flag-preview { width: 52px; height: 36px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-2); flex-shrink: 0; }
+.field-msg { min-height: 1.1em; font-size: 0.85rem; color: var(--muted); }
+.field-msg.error { color: var(--danger); }
+.create-card .quick { margin-top: 8px; }
+.form-msg a { color: var(--accent); font-weight: 600; text-decoration: underline; }
+.head-right .btn-sm { padding: 6px 12px; }

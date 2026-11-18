@@ -39,7 +39,7 @@ register.html         Sign up (Bidder or Government with the country they repres
 login.html            Log in, redirects by role
 forgot-password.html  Ask for a password reset email
 reset-password.html   Set a new password from the email link
-create-auction.html   Government only - create and view listings
+create-auction.html   Government only - create an auction and see your own
 admin.html            Admin only - auctions, users and archive tabs
 about.html            About us, the team and the contact form
 ```
@@ -53,10 +53,9 @@ js/supabase.js        Shares the Supabase client from the backend folder
 js/api.js             Data functions for the pages (auctions, bids, archive)
 js/auth.js            Logged in user, page guards, logout, the top menu
 js/ui.js              Auction cards, countdowns, NZD formatting, XSS escaping, mobile menu
-js/countries.js       Country name to flag picture
+js/countries.js       Country list, check and flags (uses the backend functions)
 js/realtime.js        Supabase Realtime subscriptions and the "Live" indicator
 database--seb/        Backend functions: sign up, login, password reset, auctions, archive
-database/             SQL scripts for the Supabase backend
 ```
 
 ## Run locally

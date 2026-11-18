@@ -1,5 +1,5 @@
 // ui helpers: menu, money, time, cards
-import { flagUrl } from './countries.js';
+import { flagUrl, countryLabel } from './countries.js';
 import { shownStatus } from './api.js';
 
 // mobile menu
@@ -57,11 +57,11 @@ export function auctionCard(a) {
   return `
     <article class="card" data-id="${esc(a.id)}">
       <div class="card-img">
-        <img src="${esc(flagUrl(a.country_name))}" alt="Flag of ${esc(a.country_name)}" loading="lazy" data-flag>
+        <img src="${esc(flagUrl(a.country_name))}" alt="Flag of ${esc(countryLabel(a.country_name))}" loading="lazy" data-flag>
         <span class="badge badge-${esc(status)}">${esc(status)}</span>
       </div>
       <div class="card-body">
-        <h3>${esc(a.country_name)}</h3>
+        <h3>${esc(countryLabel(a.country_name))}</h3>
         <div class="price-row">
           <div><small>Starting price</small><strong>${formatNZD(a.starting_price)}</strong></div>
           <div><small>Current bid</small><strong class="current-bid">${formatNZD(current)}</strong></div>

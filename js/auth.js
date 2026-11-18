@@ -54,10 +54,14 @@ export async function renderNav() {
   links.innerHTML = items.map(link).join('');
 
   const profile = await getProfile();
-  if (profile?.role === 'government') items.push(['create-auction.html', 'My listings']);
   if (profile?.role === 'admin') items.push(['admin.html', 'Admin']);
 
   let html = items.map(link).join('');
+
+  // government users get a green Create auction button
+  if (profile?.role === 'government') {
+    html += `<a href="create-auction.html" class="btn btn-primary nav-cta${current === 'create-auction.html' ? ' active' : ''}">+ Create auction</a>`;
+  }
 
   if (profile) {
     const name = document.createElement('span');
@@ -70,6 +74,19 @@ export async function renderNav() {
   }
   links.innerHTML = html;
   document.getElementById('logout-btn')?.addEventListener('click', logout);
+  showByRole(profile);
+}
+
+// parts of a page marked data-show-role="government" only show for that role,
+// and parts marked data-hide-role="government" hide for it
+function showByRole(profile) {
+  const role = profile?.role || 'guest';
+  document.querySelectorAll('[data-show-role]').forEach((el) => {
+    el.hidden = !el.dataset.showRole.split(' ').includes(role);
+  });
+  document.querySelectorAll('[data-hide-role]').forEach((el) => {
+    el.hidden = el.dataset.hideRole.split(' ').includes(role);
+  });
 }
 
 renderNav();

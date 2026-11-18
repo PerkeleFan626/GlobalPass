@@ -48,7 +48,7 @@
     import { getAuction, getBids, minNextBid, currentPrice, placeBid, isOpen, shownStatus } from './js/api.js';
     import { getProfile } from './js/auth.js';
     import { formatNZD, esc, countdownText, startCountdowns } from './js/ui.js';
-    import { flagUrl } from './js/countries.js';
+    import { flagUrl, countryLabel } from './js/countries.js';
     import { subscribeAuction, flash } from './js/realtime.js';
 
     const id = new URLSearchParams(location.search).get('id');
@@ -123,13 +123,13 @@
       try {
         [auction, bids, profile] = await Promise.all([getAuction(id), getBids(id), getProfile()]);
         const status = shownStatus(auction);
-        document.title = `${auction.country_name} | GlobalPass`;
+        document.title = `${countryLabel(auction.country_name)} | GlobalPass`;
         content.innerHTML = `
           <div class="detail">
             <section class="panel">
-              <img class="detail-img" src="${esc(flagUrl(auction.country_name))}" alt="Flag of ${esc(auction.country_name)}" data-flag>
+              <img class="detail-img" src="${esc(flagUrl(auction.country_name))}" alt="Flag of ${esc(countryLabel(auction.country_name))}" data-flag>
               <div class="detail-title">
-                <h1>${esc(auction.country_name)} citizenship</h1>
+                <h1>${esc(countryLabel(auction.country_name))} citizenship</h1>
                 <span class="badge badge-${esc(status)}">${esc(status)}</span>
               </div>
               <div class="facts">

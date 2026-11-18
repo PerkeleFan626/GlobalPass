@@ -38,7 +38,8 @@
 
       <div id="country-field" hidden>
         <label for="country">Country you represent</label>
-        <input id="country" name="country" type="text" maxlength="80" autocomplete="country-name">
+        <input id="country" name="country" type="text" maxlength="80" autocomplete="off" list="country-list" placeholder="Start typing, then pick from the list">
+        <datalist id="country-list"></datalist>
       </div>
 
       <p class="form-msg" id="msg" role="alert"></p>
@@ -54,6 +55,9 @@
     import './js/ui.js';
     import { signUpUser } from './database--seb/signUp.js';
     import { redirectIfLoggedIn, HOME_BY_ROLE } from './js/auth.js';
+    import { fillCountryList, checkCountry } from './js/countries.js';
+
+    fillCountryList('country-list');
 
     redirectIfLoggedIn();
 
@@ -82,7 +86,10 @@
 
       if (!name || !email || !password) return show('Please fill in every field.');
       if (password.length < 6) return show('Password must be at least 6 characters.');
-      if (role === 'government' && !country) return show('Enter the country you represent.');
+      if (role === 'government') {
+        const check = checkCountry(country);
+        if (!check.success) return show(check.error);
+      }
 
       btn.disabled = true;
       btn.textContent = 'Creating account...';
