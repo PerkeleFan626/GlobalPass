@@ -94,3 +94,38 @@ export async function getActiveAuctions() {
       : null
   }));
 }
+  export async function cancelAuction(auctionId) {
+  const user = await getCurrentUser();
+
+  if (!user || !user.id) {
+    const errorMsg = 'No active user found. Log in first.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  if (user.role !== 'government') {
+    const errorMsg = 'Only government accounts can cancel auctions.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  if (!auctionId) {
+    const errorMsg = 'An auction ID is required.';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  const { error } = await supabase
+    .from('auctions')
+    .update({ status: 'cancelled' })
+    .eq('id', auctionId)
+    .eq('created_by', user.id)
+    .eq('status', 'active');
+
+  if (error) {
+    console.error('Failed to cancel auction:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
