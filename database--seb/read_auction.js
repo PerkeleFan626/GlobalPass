@@ -1,28 +1,7 @@
 import { supabase } from './database.js';
 
-export async function getActiveAuctions() {
-    const {data, error} = await supabase
-    .from('auctions')
-    .select(`
-      id,
-      country_name,
-      starting_price,
-      current_highest_bid,
-      status,
-      created_at
-    `)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error, could not get active auctions', error.message);
-        return [];
-    }
-    return data;
-}
-
 export async function getAuctionById(auctionId) {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
     .from('auctions')
     .select(`
       id,
@@ -33,7 +12,8 @@ export async function getAuctionById(auctionId) {
       status,
       payment_status,
       created_by,
-      created_at
+      created_at,
+      end_time
     `)
     .eq('id', auctionId)
     .single();
@@ -46,7 +26,7 @@ export async function getAuctionById(auctionId) {
 }
 
 export async function getAuctionBids(auctionId) {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
     .from('bids')
     .select(`
       id,
@@ -63,5 +43,4 @@ export async function getAuctionBids(auctionId) {
         return [];
     }
     return data;
-
 }

@@ -36,7 +36,20 @@ export async function createAuction({ country_name, starting_price, end_time }) 
     return { success: false, error: errorMsg };
   }
 
-  const formattedEndTime = new Date(end_time).toISOString();
+  const parsedEndTime = new Date(end_time);
+  if (isNaN(parsedEndTime.getTime())) {
+    const errorMsg = 'Invalid end_time format';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  if (parsedEndTime <= new Date()) {
+    const errorMsg = 'end_time must be in the future';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  const formattedEndTime = parsedEndTime.toISOString();
 
   const { data, error } = await supabase
     .from('auctions')
@@ -94,7 +107,8 @@ export async function getActiveAuctions() {
       : null
   }));
 }
-  export async function cancelAuction(auctionId) {
+
+export async function cancelAuction(auctionId) {
   const user = await getCurrentUser();
 
   if (!user || !user.id) {
@@ -115,12 +129,9 @@ export async function getActiveAuctions() {
     return { success: false, error: errorMsg };
   }
 
-  const { error } = await supabase
-    .from('auctions')
-    .update({ status: 'cancelled' })
-    .eq('id', auctionId)
-    .eq('created_by', user.id)
-    .eq('status', 'active');
+  const { error } = await supabase.rpc('cancel_auction', {
+    p_auction_id: auctionId
+  });
 
   if (error) {
     console.error('Failed to cancel auction:', error.message);

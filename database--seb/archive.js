@@ -1,8 +1,8 @@
 import { supabase } from './database.js';
 
 export async function getArchivedAuctions() {
-  const {data, error} = await supabase
-  .from('auctions_archive')
+  const { data, error } = await supabase
+    .from('auctions_archive')
     .select(`
       id,
       auction_id,
@@ -19,24 +19,25 @@ export async function getArchivedAuctions() {
     `)
     .order('archived_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching archived auctions ', error.message);
-      return[];
-    }
+  if (error) {
+    console.error('Error fetching archived auctions ', error.message);
+    return [];
+  }
   return data;
 }
 
-export async function getActiveAuctionById(auctionId) {
-  const {data, error} = await supabase
-  .from('auctions_archive')
+export async function getArchivedAuctionById(auctionId) {
+  const { data, error } = await supabase
+    .from('auctions_archive')
     .select('*')
     .or(`auction_id.eq.${auctionId},id.eq.${auctionId}`)
-    .single();
+    .order('archived_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    if(error) {
-      console.error(`Error fetching archived auction ${auctionId}:`, error.message);
-      return null;
-    }
+  if (error) {
+    console.error(`Error fetching archived auction ${auctionId}:`, error.message);
+    return null;
+  }
   return data;
-
 }

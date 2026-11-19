@@ -1,9 +1,18 @@
 import { supabase } from './database.js';
 import { validateCountry } from './countryValidator.js';
+import { getFlagUrl } from './flagStorage.js';
 
 let activeDummyUser = null;
 
-export async function createDummyUser({ name, email, role = 'bidder', represented_country = null }) {
+function withFlag(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    flag_url: getFlagUrl(user.represented_country)
+  };
+}
+
+export async function createDummyUser({ name, email, role = 'bidder', represented_country = null, country = null }) {
   if (!name || !email) {
     const errorMsg = 'Name and email are required to create a dummy user.';
     console.error(errorMsg);
@@ -13,7 +22,7 @@ export async function createDummyUser({ name, email, role = 'bidder', represente
   let validatedCountry = null;
 
   if (role === 'government') {
-    const countryResult = validateCountry(represented_country);
+    const countryResult = validateCountry(represented_country ?? country);
     if (!countryResult.success) {
       return countryResult;
     }
@@ -32,8 +41,8 @@ export async function createDummyUser({ name, email, role = 'bidder', represente
     return { success: false, error: error.message };
   }
 
-  activeDummyUser = data;
-  return { success: true, user: data };
+  activeDummyUser = withFlag(data);
+  return { success: true, user: activeDummyUser };
 }
 
 export async function switchDummyUser(userId) {
@@ -54,8 +63,12 @@ export async function switchDummyUser(userId) {
     return { success: false, error: error.message };
   }
 
-  activeDummyUser = data;
-  return { success: true, user: data };
+  activeDummyUser = withFlag(data);
+  return { success: true, user: activeDummyUser };
+}
+
+export function setActiveDummyUser(dummyUser) {
+  activeDummyUser = withFlag(dummyUser);
 }
 
 export function getActiveDummyUser() {
