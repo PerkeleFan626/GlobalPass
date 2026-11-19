@@ -6,6 +6,21 @@ Checked on 19 November 2026 against:
 - the Supabase SQL export (functions, triggers, policies, tables)
 
 Nothing in database--seb or in Supabase was changed. These are only notes.
+
+UPDATE 19 November (after commit 06ae37d "blah"):
+Your JS files were checked again. No syntax errors, and every function
+one file imports from another exists. These are now FIXED:
+- 1  RLS policies (auctions and bids load again)
+- 10 getAuctionById() now has end_time. The auction page uses it now.
+- 11 only one getActiveAuctions() left
+- 12 dummy user code is in one file
+- 13 renamed to getArchivedAuctionById()
+- 14 createAuction() checks the date
+- 17 cancelAuction() now uses the cancel_auction SQL function, which
+     gives a clear error when nothing is cancelled (tested with an
+     auction id that does not exist)
+The SQL problems (3 to 9) were not checked again, because that needs a
+new SQL export.
 Each problem says where it is, what goes wrong, and an idea to fix it.
 Most important first.
 
@@ -189,7 +204,6 @@ switch to yours.
 
 - placeBid()             insert into bids        (js/api.js)
 - getAuctions()          catalog search, filter, sort (js/api.js)
-- getAuction()           one auction with end_time (see problem 10)
 - getMyAuctions()        a government user's own auctions (js/api.js)
 - cancel an auction (admin)  update auctions.status (admin.html).
                          Government users now use your cancelAuction().

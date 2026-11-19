@@ -41,7 +41,8 @@ forgot-password.html  Ask for a password reset email
 reset-password.html   Set a new password from the email link
 create-auction.html   Government only - create an auction and see your own
 admin.html            Admin only - auctions, users and archive tabs
-about.html            About us, the team and the contact form
+about.html            About us - what GlobalPass is and the team
+contact.html          Contact form and other ways to reach us
 ```
 
 ## Code structure

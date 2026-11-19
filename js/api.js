@@ -2,7 +2,7 @@
 // reads go through the shared supabase client
 // when the backend folder (database--seb) has a function for something, we use it
 import { supabase } from './supabase.js';
-import { getAuctionBids } from '../database--seb/read_auction.js';
+import { getAuctionById, getAuctionBids } from '../database--seb/read_auction.js';
 import { createAuction as backendCreateAuction, getActiveAuctions as backendGetActiveAuctions, cancelAuction as backendCancelAuction } from '../database--seb/auctions.js';
 import { getTestProfiles } from '../database--seb/users.js';
 import { getArchivedAuctions } from '../database--seb/archive.js';
@@ -52,15 +52,11 @@ export async function getAuctions({ search = '', status = 'all', sort = 'ending'
   return data;
 }
 
-// one auction by id
+// one auction by id (backend function)
 export async function getAuction(id) {
-  const { data, error } = await supabase
-    .from('auctions')
-    .select(AUCTION_FIELDS)
-    .eq('id', id)
-    .single();
-  if (error) throw error;
-  return data;
+  const auction = await getAuctionById(id);
+  if (!auction) throw new Error('Auction not found');
+  return auction;
 }
 
 // auctions made by one government user

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About and contact | GlobalPass</title>
-  <meta name="description" content="Who built GlobalPass and how to contact the team.">
+  <title>About | GlobalPass</title>
+  <meta name="description" content="What GlobalPass is and who built it.">
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -54,80 +54,20 @@
       <p class="note">We are software students at Yoobee College of Creative Innovation in Auckland, New Zealand.</p>
     </section>
 
-    <section class="section" id="contact" aria-labelledby="contact-heading">
-      <div class="section-head"><h2 id="contact-heading">Contact us</h2></div>
-      <div class="contact">
-        <form class="form-card contact-form" id="contact-form" novalidate>
-          <label for="c-name">Your name</label>
-          <input id="c-name" name="name" type="text" autocomplete="name" required>
-
-          <label for="c-email">Your email</label>
-          <input id="c-email" name="email" type="email" autocomplete="email" required>
-
-          <label for="c-topic">Topic</label>
-          <select id="c-topic" name="topic">
-            <option>Question</option>
-            <option>Report a problem</option>
-            <option>Feedback</option>
-          </select>
-
-          <label for="c-message">Message</label>
-          <textarea id="c-message" name="message" rows="5" required></textarea>
-
-          <p class="form-msg" id="msg" role="alert"></p>
-          <button type="submit" class="btn btn-primary btn-block">Send message</button>
-        </form>
-
-        <div class="contact-info">
-          <h3>Other ways to reach us</h3>
-          <p>Found a bug? Open an issue on our GitHub project.</p>
-          <a class="btn btn-ghost" href="https://github.com/PerkeleFan626/GlobalPass/issues" target="_blank" rel="noopener">Open GitHub issues</a>
-          <h3>Where we are</h3>
-          <p>Yoobee College of Creative Innovation<br>Auckland, New Zealand</p>
-        </div>
-      </div>
+    <section class="section" aria-labelledby="contact-heading">
+      <div class="section-head"><h2 id="contact-heading">Get in touch</h2></div>
+      <p class="muted">Questions or feedback? We would love to hear from you.</p>
+      <a href="contact.html" class="btn btn-primary" style="margin-top:16px">Contact us</a>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About &amp; contact</a></div>
+    <div class="container">© 2026 GlobalPass · All rights reserved A &amp; S · <a href="about.html">About</a> · <a href="contact.html">Contact</a></div>
   </footer>
 
   <script type="module">
     import './js/ui.js';
     import './js/auth.js';
-
-    // the address the contact form sends to
-    const CONTACT_EMAIL = 'team@globalpass.example';
-
-    const form = document.getElementById('contact-form');
-    const msg = document.getElementById('msg');
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = form.name.value.trim();
-      const email = form.email.value.trim();
-      const message = form.message.value.trim();
-
-      if (!name || !email || !message) {
-        msg.textContent = 'Please fill in your name, email and message.';
-        msg.className = 'form-msg error';
-        return;
-      }
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-        msg.textContent = 'That email does not look right.';
-        msg.className = 'form-msg error';
-        return;
-      }
-
-      // we have no mail server, so the message opens in the visitor's own email app
-      const subject = encodeURIComponent(`GlobalPass ${form.topic.value} from ${name}`);
-      const body = encodeURIComponent(`${message}\n\nFrom: ${name} (${email})`);
-      window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-
-      msg.textContent = 'Your email app should open with the message ready to send.';
-      msg.className = 'form-msg ok';
-    });
   </script>
 </body>
 </html>

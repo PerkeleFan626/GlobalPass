@@ -50,7 +50,7 @@ export async function renderNav() {
     `<a href="${href}"${href === current ? ' class="active" aria-current="page"' : ''}>${label}</a>`;
 
   // show the public links first so the menu is not empty while loading
-  const items = [['index.html', 'Home'], ['auctions.html', 'Auctions'], ['about.html', 'About']];
+  const items = [['index.html', 'Home'], ['auctions.html', 'Auctions'], ['about.html', 'About'], ['contact.html', 'Contact']];
   links.innerHTML = items.map(link).join('');
 
   const profile = await getProfile();
