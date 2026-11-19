@@ -170,6 +170,14 @@ D. JS FUNCTIONS IN database--seb
     handing in.
 
 
+17. cancelAuction() says it worked even when nothing changed
+    Where: auctions.js, cancelAuction() (added 19 November)
+    What goes wrong: the update has no .select(), so if the auction is
+    not yours, already ended, or blocked by RLS, 0 rows change but it
+    still returns { success: true }.
+    Idea: add .select('id') and return an error when no row comes back.
+
+
 -------------------------------------------------------------
 E. THINGS THE FRONTEND STILL DOES ITSELF (no backend function yet)
 -------------------------------------------------------------
@@ -183,7 +191,8 @@ switch to yours.
 - getAuctions()          catalog search, filter, sort (js/api.js)
 - getAuction()           one auction with end_time (see problem 10)
 - getMyAuctions()        a government user's own auctions (js/api.js)
-- cancel an auction      update auctions.status  (admin.html)
+- cancel an auction (admin)  update auctions.status (admin.html).
+                         Government users now use your cancelAuction().
 - change a user's role   update profiles.role    (admin.html)
 
 Also: commit 2f684cb added "window.pigg = data;" to js/api.js. The

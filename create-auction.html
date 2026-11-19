@@ -53,7 +53,7 @@
   </footer>
 
   <script type="module">
-    import { createAuction, getMyAuctions } from './js/api.js';
+    import { createAuction, getMyAuctions, cancelMyAuction, isOpen } from './js/api.js';
     import { requireRole } from './js/auth.js';
     import { auctionCard, startCountdowns } from './js/ui.js';
     import { flagUrl, countryLabel, checkCountry, fillCountryList, PLACEHOLDER_IMAGE } from './js/countries.js';
@@ -125,11 +125,51 @@
           box.innerHTML = auctions.length
             ? auctions.map(auctionCard).join('')
             : '<p class="state">You have no listings yet. Create your first one above.</p>';
+
+          // open auctions get a cancel button under the card
+          auctions.filter(isOpen).forEach((a) => {
+            const body = box.querySelector(`.card[data-id="${a.id}"] .card-body`);
+            if (!body) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-danger';
+            btn.dataset.cancel = a.id;
+            btn.textContent = 'Cancel auction';
+            body.appendChild(btn);
+          });
         } catch (err) {
           console.error(err);
           box.innerHTML = '<p class="state error">Could not load your listings.</p>';
         }
       }
+
+      // cancel needs a second click so it is not done by mistake
+      document.getElementById('mine').addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-cancel]');
+        if (!btn) return;
+        if (btn.dataset.armed !== 'true') {
+          btn.dataset.armed = 'true';
+          btn.textContent = 'Click again to cancel';
+          setTimeout(() => {
+            if (!btn.disabled) { btn.dataset.armed = ''; btn.textContent = 'Cancel auction'; }
+          }, 3000);
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Cancelling...';
+
+        // backend function: only cancels your own auction while it is still active
+        const result = await cancelMyAuction(btn.dataset.cancel);
+        if (!result.success) {
+          show('Could not cancel: ' + (result.error || 'please try again.'));
+          btn.disabled = false;
+          btn.dataset.armed = '';
+          btn.textContent = 'Cancel auction';
+          return;
+        }
+        show('Auction cancelled.', true);
+        loadMine();
+      });
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
