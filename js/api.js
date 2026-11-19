@@ -3,7 +3,7 @@
 // when the backend folder (database--seb) has a function for something, we use it
 import { supabase } from './supabase.js';
 import { getAuctionBids } from '../database--seb/read_auction.js';
-import { createAuction as backendCreateAuction, getActiveAuctions as backendGetActiveAuctions } from '../database--seb/auctions.js';
+import { createAuction as backendCreateAuction, getActiveAuctions as backendGetActiveAuctions, cancelAuction as backendCancelAuction } from '../database--seb/auctions.js';
 import { getTestProfiles } from '../database--seb/users.js';
 import { getArchivedAuctions } from '../database--seb/archive.js';
 
@@ -112,4 +112,9 @@ export async function getArchive() {
 // every user, A to Z by name (backend function, used on the admin page)
 export async function getUsers() {
   return getTestProfiles();
+}
+
+// a government user cancels one of their own auctions (backend function)
+export async function cancelMyAuction(auctionId) {
+  return backendCancelAuction(auctionId);
 }
